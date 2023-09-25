@@ -14,14 +14,15 @@ def default_reply_keyboard(one_time_keyboard: bool = True,
         row_width=row_width
     )
 
+
 def default_inline_keyboard(row_width: int = 2):
     return InlineKeyboardMarkup(
         row_width=row_width
     )
 
+
 @dataclass(frozen=True)
 class YesOrNo:
-
     reply_keyboard = default_reply_keyboard()
     inline_keyboard = default_inline_keyboard()
 
@@ -105,10 +106,10 @@ class YesOrNo:
 
         return cls.reply_keyboard
 
+
 @dataclass(frozen=True)
 class Controls:
-
-    #TODO: Controls Menu Param types: [LIST, DICT, TUPLE]
+    # TODO: Controls Menu Param types: [LIST, DICT, TUPLE]
 
     forward: str = f"Вперед ▶"
     backward: str = f"◀ Назад"
@@ -117,4 +118,3 @@ class Controls:
     forward_callback: str = f"forward_control_callback"
     backward_callback: str = f"backward_control_callback"
     close_callback: str = f"close_control_callback"
-

@@ -1,6 +1,7 @@
 import aiohttp
 from abc import ABC, abstractmethod
 
+
 class RequestSender(ABC):
 
     def __init__(self, url: str = ""):
@@ -41,6 +42,7 @@ class GetRequest(RequestSender):
                 "status": response.status,
                 "answer_data": await response.json()
             }
+
 
 class PostRequest(RequestSender):
     def __init__(self, url: str = "", data: dict = None):

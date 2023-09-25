@@ -1,14 +1,16 @@
 import uvicorn
 from fastapi import FastAPI
 
-from routers import api_router
+from man_project_2023.api.routers import api_router
 from config import settings
+
 
 def get_application():
     application = FastAPI()
     application.include_router(api_router)
 
     return application
+
 
 app = get_application()
 

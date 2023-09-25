@@ -1,10 +1,8 @@
-from man_project.telegram_bot.config import BASE_API_URL
-from man_project.telegram_bot.api.request_classes import GetRequest, PostRequest
-
+from man_project_2023.telegram_bot.config import BASE_API_URL
+from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest
 
 
 class API:
-
     __BASE_SERVER_URL: str = BASE_API_URL
 
     @classmethod
@@ -19,9 +17,7 @@ class API:
                                  data=data).send_request()
 
 
-
 class UserAPI(API):
-
     __prefix = lambda endpoint: "/user" + endpoint
 
     @classmethod
@@ -37,12 +33,9 @@ class UserAPI(API):
                                        data=data)
 
 
-
 class AdminAPI(API):
-
     __prefix = lambda endpoint: "/admin" + endpoint
 
 
 class SystemAPI(API):
-
     __prefix = lambda endpoint: "/system" + endpoint
