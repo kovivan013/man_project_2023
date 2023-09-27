@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
 class Settings(BaseSettings):
-    _BASE_API_URL: str = "https://127.0.0.1:8000"
+    _BASE_API_URL: str = "http://127.0.0.1:8000"
 
 settings = Settings()
 load_dotenv()

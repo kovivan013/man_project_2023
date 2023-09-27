@@ -1,7 +1,7 @@
 import uvicorn
 from fastapi import FastAPI
 
-from man_project_2023.api.routers import api_router
+from routers import api_router
 from config import settings
 
 

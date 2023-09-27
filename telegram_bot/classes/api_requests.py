@@ -1,3 +1,5 @@
+import asyncio
+
 from man_project_2023.telegram_bot.config import BASE_API_URL
 from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest
 
@@ -31,6 +33,11 @@ class UserAPI(API):
 
         return await cls._post_request(endpoint=endpoint,
                                        data=data)
+
+    @classmethod
+    async def get_user_status(cls, telegram_id: int):
+        endpoint: str = cls.__prefix(f"/{telegram_id}/status")
+        return await cls._get_request(endpoint=endpoint)
 
 
 class AdminAPI(API):

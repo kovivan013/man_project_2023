@@ -3,7 +3,6 @@ from sqlalchemy import Column, Integer, String, BigInteger, JSON, SmallInteger
 
 BaseModel = declarative_base()
 
-
 class User(BaseModel):
     __tablename__ = "users"
     telegram_id = Column(BigInteger, primary_key=True, index=True)

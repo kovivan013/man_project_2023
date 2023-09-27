@@ -5,8 +5,8 @@ from abc import ABC, abstractmethod
 class RequestSender(ABC):
 
     def __init__(self, url: str = ""):
-        self.url = url
-        self._payload = {}
+        self.url: str = url
+        self._payload: dict = {}
 
     @abstractmethod
     async def _send(self):
@@ -18,11 +18,8 @@ class RequestSender(ABC):
             "url": self.url
         }
 
-        headers: dict = {}
-
         session_params: dict = {
             "trust_env": True,
-            "headers": headers,
             "connector": aiohttp.TCPConnector()
         }
 
@@ -32,7 +29,7 @@ class RequestSender(ABC):
         except Exception as err:
             raise Exception(err)
 
-        return answer
+        return answer["answer_data"]
 
 
 class GetRequest(RequestSender):
