@@ -129,7 +129,7 @@ class Controls:
 @dataclass(frozen=True)
 class FinderMenu:
 
-    marketplace: str = f"🔎 Я знайшов річ..."
+    find: str = f"🔦 Я знайшов річ..."
     my_profile: str = "👤 Мій профіль"
     info_about: str = "ℹ Про проект"
 
@@ -139,7 +139,7 @@ class FinderMenu:
         reply_keyboard = default_reply_keyboard(row_width=2)
 
         reply_keyboard.add(
-            KeyboardButton(text=cls.marketplace)
+            KeyboardButton(text=cls.find)
         )
         reply_keyboard.add(
             KeyboardButton(cls.my_profile),
@@ -152,4 +152,24 @@ class FinderMenu:
 @dataclass(frozen=True)
 class SeekerMenu:
 
-    reply_keyboard = default_reply_keyboard()
+    find: str = f"🔎 Я загубив річ..."
+    my_profile: str = "👤 Мій профіль"
+    info_about: str = "ℹ Про проект"
+
+    @classmethod
+    def keyboard(cls) -> Union[ReplyKeyboardMarkup]:
+        reply_keyboard = default_reply_keyboard(row_width=2)
+
+        reply_keyboard.add(
+            KeyboardButton(text=cls.find)
+        )
+        reply_keyboard.add(
+            KeyboardButton(cls.my_profile),
+            KeyboardButton(cls.info_about)
+        )
+
+        return reply_keyboard
+
+@dataclass(frozen=True)
+class MyProfile:
+    pass
