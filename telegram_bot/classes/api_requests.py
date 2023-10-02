@@ -35,8 +35,8 @@ class UserAPI(API):
                                        data=data)
 
     @classmethod
-    async def get_user_status(cls, telegram_id: int):
-        endpoint: str = cls.__prefix(f"/{telegram_id}/status")
+    async def get_user_mode(cls, telegram_id: int):
+        endpoint: str = cls.__prefix(f"/{telegram_id}/mode")
         return await cls._get_request(endpoint=endpoint)
 
 
