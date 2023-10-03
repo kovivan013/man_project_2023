@@ -13,12 +13,13 @@ class FinderMH: # Тот кто ищет (НАШЕЛ)
 
     @classmethod
     async def cls_menu(cls, message: Message) -> None:
-        photo = open("img/mode_1_main_menu.png", "rb")
-        img = open("img/dashboard_png.png", "rb")
-        await bot.send_photo(chat_id=message.from_user.id,
-                             photo=img,
-                             reply_markup=Filters.dashboard_filter(),
-                             parse_mode="Markdown")
+        photo = open("img/dtpanel.png", "rb")
+        # img = open("img/dashboard_profile.png", "rb")
+        # bg = open("img/bg.png", "rb")
+        # await bot.send_photo(chat_id=message.from_user.id,
+        #                      photo=bg,
+        #                      reply_markup=Filters.dashboard_filter(),
+        #                      parse_mode="Markdown")
         await bot.send_photo(chat_id=message.from_user.id,
                              photo=photo,
                              caption="Знайдено речей за Вересень: *16*",
