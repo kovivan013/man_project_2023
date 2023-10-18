@@ -23,8 +23,7 @@ class UserAPI(API):
     __prefix = lambda endpoint: "/user" + endpoint
 
     @classmethod
-    async def create_user(cls, telegram_id: int, username: str,
-                          firstname: str):
+    async def create_user(cls, telegram_id: int, username: str):
         endpoint: str = cls.__prefix("/create_user")
         data: dict = {
             "telegram_id": telegram_id,

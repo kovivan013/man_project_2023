@@ -149,22 +149,44 @@ class Filters:
 
 @dataclass(frozen=True)
 class MainMenu:
-    pass
 
+    search: str = "Пошук 🔎"
+
+    search_callback: str = "search_callback"
+
+    @classmethod
+    def seeker_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+
+        search_data: dict = {
+            "text": cls.search,
+            "callback_data": cls.search_callback
+        }
+
+        keyboard.add(
+            InlineKeyboardButton(**search_data)
+        )
+
+        return keyboard
 
 
 @dataclass(frozen=True)
 class Navigation:
 
-    dashboard: str = f"Панель Детектива 🔦"
+    # general buttons
+    settings: str = f"Налаштування ⚙️"
     profile: str = f"Мій Профіль 👤"
     gigs: str = f"Оголошення 🗞️"
-    settings: str = f"Налаштування ⚙️"
+
+    #finder buttons
+    dashboard: str = f"Панель Детектива 🔦"
+
+    # seeker buttons
     marketplace: str = f"Маркетплейс 🔎"
 
     @classmethod
     def finder_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-        reply_keyboard = default_reply_keyboard(row_width=1, one_time_keyboard=False)
+        reply_keyboard = default_reply_keyboard(row_width=2, one_time_keyboard=False)
 
         reply_keyboard.add(
             KeyboardButton(text=cls.dashboard),
@@ -180,60 +202,21 @@ class Navigation:
         pass
 
 
-
-@dataclass(frozen=True)
-class FinderMenu:
-
-    @classmethod
-    def keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-
-        inline_keyboard = default_inline_keyboard()
-
-
-
-        return reply_keyboard
-
-
-@dataclass(frozen=True)
-class SeekerMenu:
-
-    find: str = f"🔎 Я загубив річ..."
-    my_profile: str = "👤 Мій профіль"
-    info_about: str = "ℹ Про проект"
-
-    @classmethod
-    def keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-        reply_keyboard = default_reply_keyboard(row_width=2)
-
-        reply_keyboard.add(
-            KeyboardButton(text=cls.find)
-        )
-        reply_keyboard.add(
-            KeyboardButton(cls.my_profile),
-            KeyboardButton(cls.info_about)
-        )
-
-        return reply_keyboard
-
 @dataclass(frozen=True)
 class MyProfile:
 
-    switch_mode: str = f"Сменить режим"
-    info_about: str = f"Про меня"
-    gigs: str = f"Мои объявления"
+    info_about: str = f"Про себе 🔓"
+    gigs: str = f"Мої оголошення 📰"
 
-    switch_mode_callback: str = f"switch_mode_callback"
     info_about_callback: str = f"info_about_callback"
     gigs_callback: str = f"gigs_callback"
+    placeholder_callback: str = f"placeholder_callback"
+
 
     @classmethod
     def keyboard(cls) -> Union[ReplyKeyboardMarkup]:
         inline_keyboard = default_inline_keyboard(row_width=1)
 
-        switch_mode_data: dict = {
-           "text": cls.switch_mode,
-            "callback_data": cls.switch_mode_callback
-        }
         info_about_data: dict = {
             "text": cls.info_about,
             "callback_data": cls.info_about_callback
@@ -245,9 +228,27 @@ class MyProfile:
 
 
         inline_keyboard.add(
-            InlineKeyboardButton(**switch_mode_data),
             InlineKeyboardButton(**info_about_data),
             InlineKeyboardButton(**gigs_data)
         )
 
         return inline_keyboard
+
+class DropdownMenu:
+    # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
+    #
+    # такого же типа с галочкой, но для меню без показа количества найденных вариантов по фильтру
+    #
+    # режим select (можно выбрать несколько вариантов чего-то например для удаления)
+
+    filters_sign: str = f"Оберіть необхідний фільтр ✅"
+    menu_sign: str = f"Оберіть необхідне меню 💻"
+    select_sign: str = f"Оберіть потрібні варіанти 🔑"
+
+    @classmethod
+    def filters_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        pass
+
+    @classmethod
+    def filters_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        pass

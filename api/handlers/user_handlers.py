@@ -13,7 +13,7 @@ user_router = APIRouter()
 
 
 @user_router.post("/create_user")
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+def create_user(user: UserCreate, response: Response, db: Session = Depends(get_db)):
 
     user_exists = db.query(User).filter(User.telegram_id == user.telegram_id).first() is not None
     if user_exists:
@@ -31,3 +31,4 @@ def get_user_mode(telegram_id: int, db: Session = Depends(get_db)):
         raise exceptions.ItemNotFoundException
 
     return user.mode
+
