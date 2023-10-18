@@ -60,15 +60,14 @@ class MyProfileMH:
     @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
         # await ProfileStates.info_about.set()
-        await message.answer(text=f"1")
+        image = open('img/dashboard_profile.png', 'rb')
+        await bot.send_photo(chat_id=message.chat.id,
+                             photo=image,
+                             reply_markup=MyProfile.info_about_keyboard())
 
     @classmethod
-    async def cls_menu(cls, message: Message, state: FSMContext) -> None:
-
-        photo = open('img/dashboard_profile.png', 'rb')
-        await bot.send_photo(chat_id=message.chat.id,
-                             photo=photo,
-                             reply_markup=MyProfile.keyboard())
+    async def my_gigs(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        pass
 
 class UserProfileMH:
     pass

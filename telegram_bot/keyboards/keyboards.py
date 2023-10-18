@@ -214,6 +214,24 @@ class MyProfile:
 
 
     @classmethod
+    def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+        placeholder_data: dict = {
+            "text": f"✅ {cls.info_about} ▼",
+            "callback_data": cls.placeholder_callback
+        }
+
+        keyboard.add(
+            InlineKeyboardButton(**placeholder_data)
+        )
+
+        keyboard["data"]: dict = {
+
+        }
+
+        return
+
+    @classmethod
     def keyboard(cls) -> Union[ReplyKeyboardMarkup]:
         inline_keyboard = default_inline_keyboard(row_width=1)
 
