@@ -26,19 +26,17 @@
 #
 # dog = Dog(ag)
 from aiogram.dispatcher.filters.state import State
-from man_project_2023.telegram_bot.keyboards.keyboards import MyProfile
 
 class StateUtils:
 
     @classmethod
-    async def get_state(cls, state: State):
+    def get_state(cls, state: State):
         return f"{state._state}"
 
-class StatesInfo:
-
     @classmethod
-    async def state_init(cls, state: str):
-        pass
+    def get_current_state(cls, current_state: str):
+        return current_state.split(":")[-1]
+
 
 
 

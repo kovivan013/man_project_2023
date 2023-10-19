@@ -2,9 +2,10 @@ from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext
 from man_project_2023.telegram_bot.states.states import ProfileStates
 from aiogram.dispatcher.filters import Text
-from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, MainMenu
+from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, MainMenu, DropdownMenu
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
+
 
 class RegisterMH:
     pass
@@ -59,7 +60,7 @@ class MyProfileMH:
 
     @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
-        # await ProfileStates.info_about.set()
+        await ProfileStates.info_about.set()
         image = open('img/dashboard_profile.png', 'rb')
         await bot.send_photo(chat_id=message.chat.id,
                              photo=image,
@@ -68,6 +69,11 @@ class MyProfileMH:
     @classmethod
     async def my_gigs(cls, callback: CallbackQuery, state: FSMContext) -> None:
         pass
+
+    @classmethod
+    async def dropdown_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        image = open('img/dashboard_profile.png', 'rb')
+        await callback.message.edit_reply_markup(reply_markup=DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=dict(MyProfile.get_keyboard())["inline_keyboard"]))
 
 class UserProfileMH:
     pass
@@ -79,4 +85,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_message_handler(
         MyProfileMH.info_about, commands=["profile"], state=None
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.dropdown_menu, Text(equals=MyProfile.placeholder_callback), state=ProfileStates.info_about
     )

@@ -1,6 +1,7 @@
 from aiogram.types import (
     KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 )
+from man_project_2023.telegram_bot.utils.utils import StateUtils
 from typing import Union
 from dataclasses import dataclass
 
@@ -212,45 +213,54 @@ class MyProfile:
     gigs_callback: str = f"gigs_callback"
     placeholder_callback: str = f"placeholder_callback"
 
+    @classmethod
+    def get_keyboard(cls):
+        keyboard = default_inline_keyboard(row_width=1)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.info_about,
+                                 callback_data=cls.info_about_callback),
+            InlineKeyboardButton(text=cls.gigs,
+                                 callback_data=cls.gigs_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def placeholder(cls, text: str, callback_data: str = placeholder_callback) -> dict:
+        return {
+            "text": f"✅ {text} ▼",
+            "callback_data": callback_data
+        }
 
     @classmethod
     def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
-        placeholder_data: dict = {
-            "text": f"✅ {cls.info_about} ▼",
-            "callback_data": cls.placeholder_callback
-        }
+
+        placeholder_data: dict = cls.placeholder(
+            cls.info_about
+        )
 
         keyboard.add(
             InlineKeyboardButton(**placeholder_data)
         )
 
-        keyboard["data"]: dict = {
-
-        }
-
-        return
+        return keyboard
 
     @classmethod
-    def keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-        inline_keyboard = default_inline_keyboard(row_width=1)
+    def my_gigs_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
 
-        info_about_data: dict = {
-            "text": cls.info_about,
-            "callback_data": cls.info_about_callback
-        }
-        gigs_data: dict = {
-            "text": cls.gigs,
-            "callback_data": cls.gigs_callback
-        }
-
-
-        inline_keyboard.add(
-            InlineKeyboardButton(**info_about_data),
-            InlineKeyboardButton(**gigs_data)
+        placeholder_data: dict = cls.placeholder(
+            cls.gigs
         )
 
-        return inline_keyboard
+        keyboard.add(
+            InlineKeyboardButton(**placeholder_data)
+        )
+
+        return keyboard
+
 
 class DropdownMenu:
     # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
@@ -263,10 +273,25 @@ class DropdownMenu:
     menu_sign: str = f"Оберіть необхідне меню 💻"
     select_sign: str = f"Оберіть потрібні варіанти 🔑"
 
-    @classmethod
-    def filters_keyboard(cls) -> Union[InlineKeyboardMarkup]:
-        pass
+    callback_data: str = f"none"
 
     @classmethod
-    def filters_keyboard(cls) -> Union[InlineKeyboardMarkup]:
-        pass
+    def menu_keyboard(cls, state: str, buttons: list) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+        current_state: str = StateUtils.get_current_state(state)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.menu_sign,
+                                 callback_data=cls.callback_data)
+        )
+
+        for i in buttons:
+            for data in i:
+                if current_state in data["callback_data"]:
+                    data["text"] = f"✅ {data['text']}"
+                keyboard.insert(
+                    InlineKeyboardButton(**data)
+                )
+
+        return keyboard
+
