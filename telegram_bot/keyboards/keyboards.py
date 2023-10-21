@@ -22,6 +22,20 @@ def default_inline_keyboard(row_width: int = 2):
     )
 
 
+class Utils:
+
+    def get_buttons(self):
+        buttons = vars(self)
+
+        buttons_list: list = []
+        for i, v in buttons.items():
+            if "callback" not in i:
+                buttons_list.append([{"text": v, "callback_data": buttons[i + "_callback"]}])
+
+        return buttons_list
+
+
+
 @dataclass(frozen=True)
 class YesOrNo:
 
@@ -203,28 +217,16 @@ class Navigation:
         pass
 
 
-@dataclass(frozen=True)
-class MyProfile:
+class MyProfile(Utils):
 
-    info_about: str = f"Про себе 🔓"
-    gigs: str = f"Мої оголошення 📰"
+    def __init__(self):
+        self.info_about: str = f"Про себе 🔓"
+        self.gigs: str = f"Мої оголошення 📰"
 
-    info_about_callback: str = f"info_about_callback"
-    gigs_callback: str = f"gigs_callback"
+        self.info_about_callback: str = f"info_about_callback"
+        self.gigs_callback: str = f"gigs_callback"
+
     placeholder_callback: str = f"placeholder_callback"
-
-    @classmethod
-    def get_keyboard(cls):
-        keyboard = default_inline_keyboard(row_width=1)
-
-        keyboard.add(
-            InlineKeyboardButton(text=cls.info_about,
-                                 callback_data=cls.info_about_callback),
-            InlineKeyboardButton(text=cls.gigs,
-                                 callback_data=cls.gigs_callback)
-        )
-
-        return keyboard
 
     @classmethod
     def placeholder(cls, text: str, callback_data: str = placeholder_callback) -> dict:
@@ -261,7 +263,7 @@ class MyProfile:
 
         return keyboard
 
-
+@dataclass(frozen=True)
 class DropdownMenu:
     # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
     #
@@ -294,4 +296,3 @@ class DropdownMenu:
                 )
 
         return keyboard
-

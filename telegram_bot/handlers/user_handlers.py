@@ -75,6 +75,25 @@ class MyProfileMH:
         image = open('img/dashboard_profile.png', 'rb')
         await callback.message.edit_reply_markup(reply_markup=DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=dict(MyProfile.get_keyboard())["inline_keyboard"]))
 
+class Test:
+
+    @classmethod
+    async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        print(callback.message)
+
+    @classmethod
+    async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
+        await ProfileStates.gigs.set()
+        # image = open('img/test35459468345687456.png', 'rb')
+        image = open('img/test4568745684.png', 'rb')
+        # reply_markup = DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=MyProfile().get_buttons()))
+        await bot.send_photo(chat_id=message.chat.id,
+                             photo=image,
+                             caption="Test input message to keyboards select menu",
+                             reply_markup=DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=MyProfile().get_buttons()))
+        await message.answer(text="srfgdbgrfjhedgbrfijuhedrgfiedhfvbds\njhfvbdjiufyrgduyfvgbdu",
+                             reply_markup={"inline_keyboard": [[{"text": "--------------------------------------------------", "callback_data": "dfghb"}]]})
+
 class UserProfileMH:
     pass
 
@@ -88,4 +107,10 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         MyProfileMH.dropdown_menu, Text(equals=MyProfile.placeholder_callback), state=ProfileStates.info_about
+    )
+    dp.register_message_handler(
+        Test.input_kb_func, commands=["test"], state=None
+    )
+    dp.register_callback_query_handler(
+        Test.keyboards_menu, Text(equals="placeholder_callback")
     )

@@ -26,6 +26,8 @@
 #
 # dog = Dog(ag)
 from aiogram.dispatcher.filters.state import State
+from dataclasses import dataclass
+from typing import Union
 
 class StateUtils:
 
@@ -37,6 +39,28 @@ class StateUtils:
     def get_current_state(cls, current_state: str):
         return current_state.split(":")[-1]
 
-
+# class Utils:
+#
+#     def get_buttons(self):
+#         buttons = vars(self)
+#
+#         buttons_list: list = []
+#         for i, v in buttons.items():
+#             if "callback" not in i:
+#                 buttons_list.append([{"text": v, "callback_data": buttons[i + "_callback"]}])
+#
+#         return {"inline_keyboard": buttons_list}
+#
+# class MyProfile(Utils):
+#
+#     def __init__(self):
+#         self.info_about: str = f"Про себе 🔓"
+#         self.gigs: str = f"Мої оголошення 📰"
+#
+#         self.info_about_callback: str = f"info_about_callback"
+#         self.gigs_callback: str = f"gigs_callback"
+#
+#
+# print(MyProfile().get_buttons())
 
 
