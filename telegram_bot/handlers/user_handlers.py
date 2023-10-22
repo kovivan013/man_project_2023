@@ -2,10 +2,10 @@ from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext
 from man_project_2023.telegram_bot.states.states import ProfileStates
 from aiogram.dispatcher.filters import Text
-from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, MainMenu, DropdownMenu
+from man_project_2023.telegram_bot.utils.utils import StateUtils
+from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
-
 
 class RegisterMH:
     pass
@@ -24,8 +24,6 @@ class FinderMH: # Тот кто ищет (НАШЕЛ)
                                text=f"Немає доступних оголошень",
                                reply_markup=Navigation.finder_keyboard())
 
-
-
 class SeekerMH: # Тот кто ищет (ПОТЕРЯЛ)
 
     @classmethod
@@ -35,8 +33,6 @@ class SeekerMH: # Тот кто ищет (ПОТЕРЯЛ)
                              caption=f"💡 Що шукаєш сьогодні?",
                              photo=photo,
                              reply_markup=MainMenu.seeker_keyboard())
-
-
 
 class StartMH:
 
@@ -70,33 +66,34 @@ class MyProfileMH:
     async def my_gigs(cls, callback: CallbackQuery, state: FSMContext) -> None:
         pass
 
-    @classmethod
-    async def dropdown_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        image = open('img/dashboard_profile.png', 'rb')
-        await callback.message.edit_reply_markup(reply_markup=DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=dict(MyProfile.get_keyboard())["inline_keyboard"]))
 
-class Test:
+class Test(StateUtils):
 
     @classmethod
     async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
         print(callback.message)
+        reply_markup = DropdownMenu.menu_keyboard(
+            state=state_name,
+            buttons=MyProfile().get_buttons())
 
     @classmethod
     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
-        await ProfileStates.gigs.set()
-        # image = open('img/test35459468345687456.png', 'rb')
-        image = open('img/test4568745684.png', 'rb')
-        # reply_markup = DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=MyProfile().get_buttons()))
+        await ProfileStates.info_about.set()
+        state_name: str = cls.get_current_state(await state.get_state())
+        print(state_name)
+        image = open('img/dashboard_profile.png', 'rb')
         await bot.send_photo(chat_id=message.chat.id,
                              photo=image,
                              caption="Test input message to keyboards select menu",
-                             reply_markup=DropdownMenu.menu_keyboard(state=await state.get_state(), buttons=MyProfile().get_buttons()))
-        await message.answer(text="srfgdbgrfjhedgbrfijuhedrgfiedhfvbds\njhfvbdjiufyrgduyfvgbdu",
-                             reply_markup={"inline_keyboard": [[{"text": "--------------------------------------------------", "callback_data": "dfghb"}]]})
+                             reply_markup=DropdownMenu.placeholder_menu(MyProfile().get_current_menu(state_name))
+                             )
+        image = open('img/test35459468345687456.png', 'rb')
+        await message.answer_photo(caption=f"Test caption",
+                                   photo=image
+                                   )
 
 class UserProfileMH:
     pass
-
 
 def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(
@@ -104,9 +101,6 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_message_handler(
         MyProfileMH.info_about, commands=["profile"], state=None
-    )
-    dp.register_callback_query_handler(
-        MyProfileMH.dropdown_menu, Text(equals=MyProfile.placeholder_callback), state=ProfileStates.info_about
     )
     dp.register_message_handler(
         Test.input_kb_func, commands=["test"], state=None

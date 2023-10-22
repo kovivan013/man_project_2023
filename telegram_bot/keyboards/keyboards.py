@@ -24,6 +24,8 @@ def default_inline_keyboard(row_width: int = 2):
 
 class Utils:
 
+
+
     def get_buttons(self):
         buttons = vars(self)
 
@@ -33,6 +35,12 @@ class Utils:
                 buttons_list.append([{"text": v, "callback_data": buttons[i + "_callback"]}])
 
         return buttons_list
+
+    def get_current_menu(self, state: str):
+        keyboards = vars(self)
+
+        return {"text": f"✅ {keyboards[state]} ▼", "callback_data": keyboards[state + "_callback"]}
+
 
 
 
@@ -142,7 +150,6 @@ class Controls:
     close_callback: str = f"close_control_callback"
 
 
-
 @dataclass(frozen=True)
 class Filters:
 
@@ -163,24 +170,45 @@ class Filters:
 
 
 @dataclass(frozen=True)
-class MainMenu:
+class DropdownMenu:
+    # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
+    #
+    # такого же типа с галочкой, но для меню без показа количества найденных вариантов по фильтру
+    #
+    # режим select (можно выбрать несколько вариантов чего-то например для удаления)
 
-    search: str = "Пошук 🔎"
+    filters_sign: str = f"Оберіть необхідний фільтр ✅"
+    menu_sign: str = f"Оберіть необхідне меню 💻"
+    select_sign: str = f"Оберіть потрібні варіанти 🔑"
 
-    search_callback: str = "search_callback"
+    callback_data: str = f"none"
 
     @classmethod
-    def seeker_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+    def placeholder_menu(cls, current_menu_button: dict):
         keyboard = default_inline_keyboard(row_width=1)
 
-        search_data: dict = {
-            "text": cls.search,
-            "callback_data": cls.search_callback
-        }
-
         keyboard.add(
-            InlineKeyboardButton(**search_data)
+            InlineKeyboardButton(**current_menu_button)
         )
+
+        return keyboard
+
+    @classmethod
+    def menu_keyboard(cls, state: str, buttons: list) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+
+        # keyboard.add(
+        #     InlineKeyboardButton(text=cls.menu_sign,
+        #                          callback_data=cls.callback_data)
+        # )
+
+        for i in buttons:
+            for data in i:
+                if state in data["callback_data"]:
+                    data["text"] = f"✅ {data['text']}"
+                keyboard.insert(
+                    InlineKeyboardButton(**data)
+                )
 
         return keyboard
 
@@ -260,39 +288,5 @@ class MyProfile(Utils):
         keyboard.add(
             InlineKeyboardButton(**placeholder_data)
         )
-
-        return keyboard
-
-@dataclass(frozen=True)
-class DropdownMenu:
-    # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
-    #
-    # такого же типа с галочкой, но для меню без показа количества найденных вариантов по фильтру
-    #
-    # режим select (можно выбрать несколько вариантов чего-то например для удаления)
-
-    filters_sign: str = f"Оберіть необхідний фільтр ✅"
-    menu_sign: str = f"Оберіть необхідне меню 💻"
-    select_sign: str = f"Оберіть потрібні варіанти 🔑"
-
-    callback_data: str = f"none"
-
-    @classmethod
-    def menu_keyboard(cls, state: str, buttons: list) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard(row_width=1)
-        current_state: str = StateUtils.get_current_state(state)
-
-        keyboard.add(
-            InlineKeyboardButton(text=cls.menu_sign,
-                                 callback_data=cls.callback_data)
-        )
-
-        for i in buttons:
-            for data in i:
-                if current_state in data["callback_data"]:
-                    data["text"] = f"✅ {data['text']}"
-                keyboard.insert(
-                    InlineKeyboardButton(**data)
-                )
 
         return keyboard
