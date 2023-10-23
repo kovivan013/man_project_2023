@@ -1,6 +1,6 @@
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext
-from man_project_2023.telegram_bot.states.states import ProfileStates
+from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState
 from aiogram.dispatcher.filters import Text
 from man_project_2023.telegram_bot.utils.utils import StateUtils
 from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu
@@ -74,18 +74,25 @@ class Test(StateUtils):
         print(callback.message)
         reply_markup = DropdownMenu.menu_keyboard(
             state=state_name,
-            buttons=MyProfile().get_buttons())
+            buttons=MyProfile().get_buttons()
+        )
 
     @classmethod
     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
-        await ProfileStates.info_about.set()
-        state_name: str = cls.get_current_state(await state.get_state())
-        print(state_name)
+        current_state = CurrentState(state,
+                                     MyProfile)
+
         image = open('img/dashboard_profile.png', 'rb')
+        # await bot.send_photo(chat_id=message.chat.id,
+        #                      photo=image,
+        #                      caption="Test input message to keyboards select menu",
+        #                      reply_markup=DropdownMenu.placeholder_menu(MyProfile().get_current_menu(state_name))
+        #                      )
+        await ProfileStates.gigs.set()
         await bot.send_photo(chat_id=message.chat.id,
                              photo=image,
                              caption="Test input message to keyboards select menu",
-                             reply_markup=DropdownMenu.placeholder_menu(MyProfile().get_current_menu(state_name))
+                             reply_markup=DropdownMenu.placeholder_menu(current_menu=await current_state.get_placeholder())
                              )
         image = open('img/test35459468345687456.png', 'rb')
         await message.answer_photo(caption=f"Test caption",

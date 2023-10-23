@@ -184,11 +184,11 @@ class DropdownMenu:
     callback_data: str = f"none"
 
     @classmethod
-    def placeholder_menu(cls, current_menu_button: dict):
+    def placeholder_menu(cls, current_menu: dict):
         keyboard = default_inline_keyboard(row_width=1)
 
         keyboard.add(
-            InlineKeyboardButton(**current_menu_button)
+            InlineKeyboardButton(**current_menu)
         )
 
         return keyboard
