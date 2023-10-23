@@ -1,4 +1,5 @@
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
+from aiogram.types.input_media import InputMediaPhoto
 from aiogram.dispatcher.storage import FSMContext
 from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState
 from aiogram.dispatcher.filters import Text
@@ -71,11 +72,23 @@ class Test(StateUtils):
 
     @classmethod
     async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        print(callback.message)
-        reply_markup = DropdownMenu.menu_keyboard(
-            state=state_name,
-            buttons=MyProfile().get_buttons()
+        current_state = CurrentState(state,
+                                     MyProfile)
+        image = open('img/test35459468345687456.png', 'rb')
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=image,
+            caption=f"*Оберіть необхідне меню* 💻*:*",
+            parse_mode="Markdown"
+        ),
+            reply_markup=DropdownMenu.menu_keyboard(
+                buttons=await current_state.get_buttons()
+            )
         )
+
+        # reply_markup = DropdownMenu.menu_keyboard(
+        #     state=state_name,
+        #     buttons=MyProfile().get_buttons()
+        # )
 
     @classmethod
     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
@@ -83,16 +96,13 @@ class Test(StateUtils):
                                      MyProfile)
 
         image = open('img/dashboard_profile.png', 'rb')
-        # await bot.send_photo(chat_id=message.chat.id,
-        #                      photo=image,
-        #                      caption="Test input message to keyboards select menu",
-        #                      reply_markup=DropdownMenu.placeholder_menu(MyProfile().get_current_menu(state_name))
-        #                      )
         await ProfileStates.gigs.set()
         await bot.send_photo(chat_id=message.chat.id,
                              photo=image,
                              caption="Test input message to keyboards select menu",
-                             reply_markup=DropdownMenu.placeholder_menu(current_menu=await current_state.get_placeholder())
+                             reply_markup=DropdownMenu.placeholder_menu(
+                                 current_menu=await current_state.get_placeholder()
+                             )
                              )
         image = open('img/test35459468345687456.png', 'rb')
         await message.answer_photo(caption=f"Test caption",
@@ -113,5 +123,5 @@ def register_user_handlers(dp: Dispatcher) -> None:
         Test.input_kb_func, commands=["test"], state=None
     )
     dp.register_callback_query_handler(
-        Test.keyboards_menu, Text(equals="placeholder_callback")
+        Test.keyboards_menu, Text(equals="placeholder_callback"), state=["*"]
     )

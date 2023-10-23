@@ -40,7 +40,7 @@ class CurrentState:
         buttons_list: list = []
         for i, v in keyboard.items():
             if "callback" not in i:
-                buttons_list.append([{"text": f"✅ {v}" if mark_current else v,
+                buttons_list.append([{"text": f"✅ {v}" if mark_current and await self.get_name() in i else v,
                                       "callback_data": keyboard[i + "_callback"]}])
 
         return buttons_list
@@ -49,7 +49,7 @@ class CurrentState:
         buttons = vars(await self.get_class())
         state = await self.get_name()
 
-        return {"text": f"✅ {buttons[state]} ▼", "callback_data": buttons[state + "_callback"]}
+        return {"text": f"✅ {buttons[state]} ▼", "callback_data": "placeholder_callback"}
 
 
 class ProfileStates(StatesGroup):

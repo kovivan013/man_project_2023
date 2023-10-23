@@ -194,7 +194,7 @@ class DropdownMenu:
         return keyboard
 
     @classmethod
-    def menu_keyboard(cls, state: str, buttons: list) -> Union[InlineKeyboardMarkup]:
+    def menu_keyboard(cls, buttons: list) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
 
         # keyboard.add(
@@ -204,9 +204,9 @@ class DropdownMenu:
 
         for i in buttons:
             for data in i:
-                if state in data["callback_data"]:
-                    data["text"] = f"✅ {data['text']}"
-                keyboard.insert(
+                # if state in data["callback_data"]:
+                #     data["text"] = f"✅ {data['text']}"
+                keyboard.add(
                     InlineKeyboardButton(**data)
                 )
 
