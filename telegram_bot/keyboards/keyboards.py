@@ -1,7 +1,6 @@
 from aiogram.types import (
     KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 )
-from man_project_2023.telegram_bot.utils.utils import StateUtils
 from typing import Union
 from dataclasses import dataclass
 
@@ -20,28 +19,6 @@ def default_inline_keyboard(row_width: int = 2):
     return InlineKeyboardMarkup(
         row_width=row_width
     )
-
-
-class Utils:
-
-
-
-    def get_buttons(self):
-        buttons = vars(self)
-
-        buttons_list: list = []
-        for i, v in buttons.items():
-            if "callback" not in i:
-                buttons_list.append([{"text": v, "callback_data": buttons[i + "_callback"]}])
-
-        return buttons_list
-
-    def get_current_menu(self, state: str):
-        keyboards = vars(self)
-
-        return {"text": f"✅ {keyboards[state]} ▼", "callback_data": keyboards[state + "_callback"]}
-
-
 
 
 @dataclass(frozen=True)
@@ -177,6 +154,8 @@ class DropdownMenu:
     #
     # режим select (можно выбрать несколько вариантов чего-то например для удаления)
 
+    # TODO: Возможно уберу, поскольку это в тексте сообщения + На пк - лучше как сейчас, на телефона и так и так
+
     filters_sign: str = f"Оберіть необхідний фільтр ✅"
     menu_sign: str = f"Оберіть необхідне меню 💻"
     select_sign: str = f"Оберіть потрібні варіанти 🔑"
@@ -204,15 +183,13 @@ class DropdownMenu:
 
         for i in buttons:
             for data in i:
-                # if state in data["callback_data"]:
-                #     data["text"] = f"✅ {data['text']}"
                 keyboard.add(
                     InlineKeyboardButton(**data)
                 )
 
         return keyboard
 
-
+# TODO: Нужно разделить на 2 класса потерявшего и нашедшего, буду смотреть по ситуации
 @dataclass(frozen=True)
 class Navigation:
 
@@ -245,7 +222,7 @@ class Navigation:
         pass
 
 
-class MyProfile(Utils):
+class MyProfile:
 
     def __init__(self):
         self.info_about: str = f"Про себе 🔓"
@@ -254,39 +231,4 @@ class MyProfile(Utils):
         self.info_about_callback: str = f"info_about_callback"
         self.gigs_callback: str = f"gigs_callback"
 
-    placeholder_callback: str = f"placeholder_callback"
-
-    @classmethod
-    def placeholder(cls, text: str, callback_data: str = placeholder_callback) -> dict:
-        return {
-            "text": f"✅ {text} ▼",
-            "callback_data": callback_data
-        }
-
-    @classmethod
-    def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard(row_width=1)
-
-        placeholder_data: dict = cls.placeholder(
-            cls.info_about
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(**placeholder_data)
-        )
-
-        return keyboard
-
-    @classmethod
-    def my_gigs_keyboard(cls) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard(row_width=1)
-
-        placeholder_data: dict = cls.placeholder(
-            cls.gigs
-        )
-
-        keyboard.add(
-            InlineKeyboardButton(**placeholder_data)
-        )
-
-        return keyboard
+#   TODO: keyboards

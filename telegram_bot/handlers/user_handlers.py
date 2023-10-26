@@ -2,8 +2,8 @@ from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.types.input_media import InputMediaPhoto
 from aiogram.dispatcher.storage import FSMContext
 from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState
+from man_project_2023.telegram_bot.utils.utils import HandlersUtils
 from aiogram.dispatcher.filters import Text
-from man_project_2023.telegram_bot.utils.utils import StateUtils
 from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
@@ -56,19 +56,51 @@ class StartMH:
 class MyProfileMH:
 
     @classmethod
+    async def menu_manager(cls, message: Message, state: FSMContext) -> None:
+        await message
+
+
+    @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
+        current_state = CurrentState(state,
+                                     MyProfile)
         await ProfileStates.info_about.set()
         image = open('img/dashboard_profile.png', 'rb')
         await bot.send_photo(chat_id=message.chat.id,
                              photo=image,
-                             reply_markup=MyProfile.info_about_keyboard())
+                             reply_markup=DropdownMenu.placeholder_menu(
+                                 current_menu=await current_state.get_placeholder()
+                             )
+                             )
+        # TODO: function menu
+        image = open('img/test35459468345687456.png', 'rb')
+        await message.answer_photo(caption=f"TODO: MENU",
+                                   photo=image
+                                   )
 
     @classmethod
     async def my_gigs(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        pass
+        current_state = CurrentState(state,
+                                     MyProfile)
+        await ProfileStates.info_about.set()
+        image = open('img/dashboard_profile.png', 'rb')
+        await bot.send_photo(chat_id=message.chat.id,
+                             photo=image,
+                             caption="Test input message to keyboards select menu",
+                             reply_markup=DropdownMenu.placeholder_menu(
+                                 current_menu=await current_state.get_placeholder()
+                             )
+                             )
+
+        # TODO: function menu
+        image = open('img/test35459468345687456.png', 'rb')
+        await message.answer_photo(caption=f"TODO: MENU",
+                                   photo=image
+                                   )
 
 
-class Test(StateUtils):
+
+class Test:
 
     @classmethod
     async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -77,13 +109,14 @@ class Test(StateUtils):
         image = open('img/test35459468345687456.png', 'rb')
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
-            caption=f"*Оберіть необхідне меню* 💻*:*",
+            caption=f"💻 *Оберіть необхідне меню:*",
             parse_mode="Markdown"
         ),
             reply_markup=DropdownMenu.menu_keyboard(
                 buttons=await current_state.get_buttons()
             )
         )
+        await ProfileStates.select_menu.set()
 
         # reply_markup = DropdownMenu.menu_keyboard(
         #     state=state_name,
@@ -94,6 +127,7 @@ class Test(StateUtils):
     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile)
+
 
         image = open('img/dashboard_profile.png', 'rb')
         await ProfileStates.gigs.set()
@@ -124,4 +158,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         Test.keyboards_menu, Text(equals="placeholder_callback"), state=["*"]
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.info_about, Text(equals=MyProfile().info_about_callback), state=ProfileStates.select_menu
     )

@@ -1,7 +1,5 @@
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
-from pydantic import BaseModel
-
 
 class CurrentState:
 
@@ -48,13 +46,18 @@ class CurrentState:
     async def get_placeholder(self):
         buttons = vars(await self.get_class())
         state = await self.get_name()
+        callback: str = "placeholder_callback"
 
-        return {"text": f"✅ {buttons[state]} ▼", "callback_data": "placeholder_callback"}
+        return {"text": f"✅ {buttons[state]} ▼",
+                "callback_data": callback}
+
 
 
 class ProfileStates(StatesGroup):
     info_about = State()
     gigs = State()
+    select_menu = State()
     # tasks = State()
     # in states (editing etc.)
+
 

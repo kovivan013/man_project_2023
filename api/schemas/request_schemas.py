@@ -10,17 +10,63 @@ class UserCreate(BaseModel):
     def as_dict(self) -> dict:
         return self.__dict__
 
-# class GigCreate(BaseModel):
-#     id: int
-#     status: int
-#     name: str
-#     description: str
-#     # image = None
-#     location: dict
-#     date: int
+class GigCreate(BaseModel):
+    # id: int
+    # status: int
+    # name: str
+    # description: str
+    # # image = None
+    # location: dict
+    # date: int
+
+    # id: int
+    # status: int
+    # tags: list
+
+    def as_dict(self) -> dict:
+        return self.__dict__
+
+#   СТОЛБЕЦ ОГОЛОШЕННЯ
+# kovivan013
+# {
+#     "time": "yyyy_MM_dd"
+#     "time"
+# }
+# dct = {
+#     "users": {
+#         "user": {
+#             "telegram_id": 24735627,
+#             "username": "test",
+#             "gigs": {
+#                 0: {
+#                     "active": {
+#                         "sdHF84jfhd78": {
+#                             "id": 576455,
+#                             "status": 1
+#                         }
+#                     },
+#                     "completed": {
+#                         "s3dfF45678jfhd78": {
 #
-#     def as_dict(self) -> dict:
-#         return self.__dict__
+#                         }
+#                     }
+#                 },
+#                 1: {
+#                     "active": {
+#                         "sdHF84jfhd78": {
+#
+#                         }
+#                     },
+#                     "completed": {
+#                         "s3dfF45678jfhd78": {
+#
+#                         }
+#                     }
+#                 }
+#                 }
+#             }
+#         }
+#     }
 
 
 

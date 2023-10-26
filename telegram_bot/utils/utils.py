@@ -25,19 +25,40 @@
 #     pass
 #
 # dog = Dog(ag)
-from aiogram.dispatcher.filters.state import State
 from dataclasses import dataclass
 from typing import Union
 
-class StateUtils:
+class Utils:
+    pass
 
-    @classmethod
-    def get_state(cls, state: State):
-        return f"{state._state}"
 
-    @classmethod
-    def get_current_state(cls, current_state: str):
-        return current_state.split(":")[-1]
+class HandlersUtils:
+    # TODO: context manager, etc...
+
+    # @classmethod
+    # async def context_manager(self):
+
+    pass
+
+
+class KeyboardsUtils:
+    # TODO: перенести некоторые классы из стэйтов
+    pass
+
+
+class StatesUtils:
+    pass
+
+
+# class StateUtils:
+#
+#     @classmethod
+#     def get_state(cls, state: State):
+#         return f"{state._state}"
+#
+#     @classmethod
+#     def get_current_state(cls, current_state: str):
+#         return current_state.split(":")[-1]
 
 # class Utils:
 #
@@ -62,5 +83,3 @@ class StateUtils:
 #
 #
 # print(MyProfile().get_buttons())
-
-
