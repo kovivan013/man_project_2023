@@ -27,6 +27,9 @@
 # dog = Dog(ag)
 from dataclasses import dataclass
 from typing import Union
+from man_project_2023.telegram_bot.states.states import CurrentState
+from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
+from aiogram.types import Message
 
 class Utils:
     pass
@@ -35,16 +38,17 @@ class Utils:
 class HandlersUtils:
     # TODO: context manager, etc...
 
-    # @classmethod
-    # async def context_manager(self):
-
-    pass
-
+    @classmethod
+    async def context_manager(cls, current_state: CurrentState,
+                              message: Message, image: str):
+        photo = await current_state.state_photo(image=image)
+        await message.answer_photo(photo=photo,
+                                   reply_markup=DropdownMenu.placeholder_menu(
+                                       current_menu=await current_state.get_placeholder()
+                                   ))
 
 class KeyboardsUtils:
-    # TODO: перенести некоторые классы из стэйтов
     pass
-
 
 class StatesUtils:
     pass

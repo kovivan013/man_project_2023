@@ -55,6 +55,8 @@ class StartMH:
 
 class MyProfileMH:
 
+    utils = HandlersUtils()
+
     @classmethod
     async def menu_manager(cls, message: Message, state: FSMContext) -> None:
         await message
@@ -63,15 +65,21 @@ class MyProfileMH:
     @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
-                                     MyProfile)
+                                     MyProfile,
+                                     ProfileStates)
+        # await current_state.context_manager(message=message,
+        #                                     image="dashboard_profile")
         await ProfileStates.info_about.set()
-        image = open('img/dashboard_profile.png', 'rb')
-        await bot.send_photo(chat_id=message.chat.id,
-                             photo=image,
-                             reply_markup=DropdownMenu.placeholder_menu(
-                                 current_menu=await current_state.get_placeholder()
-                             )
-                             )
+        await cls.utils.context_manager(current_state=current_state,
+                                        message=message,
+                                        image="dashboard_profile")
+        # image = open('img/dashboard_profile.png', 'rb')
+        # await bot.send_photo(chat_id=message.chat.id,
+        #                      photo=await current_state.state_photo(image="dashboard_profile"),
+        #                      reply_markup=DropdownMenu.placeholder_menu(
+        #                          current_menu=await current_state.get_placeholder()
+        #                      )
+        #                      )
         # TODO: function menu
         image = open('img/test35459468345687456.png', 'rb')
         await message.answer_photo(caption=f"TODO: MENU",

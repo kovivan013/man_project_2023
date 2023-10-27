@@ -1,11 +1,14 @@
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
+from aiogram.types import Message
+from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
 
 class CurrentState:
 
-    def __init__(self, state: FSMContext, keyboard_class = None):
+    def __init__(self, state: FSMContext, keyboard_class = None, state_class = None):
         self.state = state
         self.keyboard_class = keyboard_class
+        self.state_class = state_class
 
     async def get_state(self) -> dict:
         state: str = await self.state.get_state()
@@ -29,6 +32,9 @@ class CurrentState:
             return state["group"]
         return None
 
+    async def get_state_class(self):
+        return self.state_class()
+
     async def get_class(self):
         return self.keyboard_class()
 
@@ -38,7 +44,7 @@ class CurrentState:
         buttons_list: list = []
         for i, v in keyboard.items():
             if "callback" not in i:
-                buttons_list.append([{"text": f"✅ {v}" if mark_current and await self.get_name() in i else v,
+                buttons_list.append([{"text": f"✅ {v}" if mark_current and await self.get_name() == i else v,
                                       "callback_data": keyboard[i + "_callback"]}])
 
         return buttons_list
@@ -51,12 +57,23 @@ class CurrentState:
         return {"text": f"✅ {buttons[state]} ▼",
                 "callback_data": callback}
 
+    async def state_photo(self, image: str):
+        path: str = f"img/states_images/{image}.png"
+        photo = open(path, "rb")
+        return photo
 
 
 class ProfileStates(StatesGroup):
     info_about = State()
     gigs = State()
     select_menu = State()
+
+    # @classmethod
+    # async def state_image(cls, path: str = "img/states_images/",
+    #                       mode: str = "rb"):
+    #     return open(path + "dashboard_profile", mode)
+
+
     # tasks = State()
     # in states (editing etc.)
 
