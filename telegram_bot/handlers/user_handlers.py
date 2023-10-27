@@ -70,9 +70,13 @@ class MyProfileMH:
         # await current_state.context_manager(message=message,
         #                                     image="dashboard_profile")
         await ProfileStates.info_about.set()
-        await cls.utils.context_manager(current_state=current_state,
-                                        message=message,
-                                        image="dashboard_profile")
+        context_manager = await cls.utils.context_manager(current_state=current_state,
+                                                          message=message,
+                                                          image="dashboard_profile")
+        async with state.proxy() as data:
+            data["context_manager"]: Message = context_manager
+
+
         # image = open('img/dashboard_profile.png', 'rb')
         # await bot.send_photo(chat_id=message.chat.id,
         #                      photo=await current_state.state_photo(image="dashboard_profile"),
@@ -110,6 +114,8 @@ class MyProfileMH:
 
 class Test:
 
+    utils = HandlersUtils()
+
     @classmethod
     async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
         current_state = CurrentState(state,
@@ -124,8 +130,11 @@ class Test:
                 buttons=await current_state.get_buttons()
             )
         )
-        await ProfileStates.select_menu.set()
-
+        # await ProfileStates.select_menu.set()
+        async with state.proxy() as data:
+            msg = data["context_manager"]
+            await cls.utils.edit_context_manager(current_state=current_state,
+                                                 message=msg)
         # reply_markup = DropdownMenu.menu_keyboard(
         #     state=state_name,
         #     buttons=MyProfile().get_buttons()

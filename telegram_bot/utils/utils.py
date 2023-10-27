@@ -29,7 +29,7 @@ from dataclasses import dataclass
 from typing import Union
 from man_project_2023.telegram_bot.states.states import CurrentState
 from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
-from aiogram.types import Message
+from aiogram.types import Message, InputMediaPhoto
 
 class Utils:
     pass
@@ -40,12 +40,26 @@ class HandlersUtils:
 
     @classmethod
     async def context_manager(cls, current_state: CurrentState,
-                              message: Message, image: str):
+                              message: Message, image: str) -> Message:
         photo = await current_state.state_photo(image=image)
-        await message.answer_photo(photo=photo,
-                                   reply_markup=DropdownMenu.placeholder_menu(
-                                       current_menu=await current_state.get_placeholder()
-                                   ))
+        instance = await message.answer_photo(photo=photo,
+                                              reply_markup=DropdownMenu.placeholder_menu(
+                                                  current_menu=await current_state.get_placeholder()
+                                              ))
+        return instance
+
+    @classmethod
+    async def edit_context_manager(cls, current_state: CurrentState,
+                                   message: Message):
+        file_id = message.photo[-1]["file_id"]
+        await message.edit_media(media=InputMediaPhoto(
+                media=file_id
+            ),
+            reply_markup=DropdownMenu.placeholder_menu(
+                current_menu=await current_state.get_placeholder()
+        ))
+
+
 
 class KeyboardsUtils:
     pass
