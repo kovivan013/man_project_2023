@@ -41,17 +41,21 @@ class HandlersUtils:
     @classmethod
     async def context_manager(cls, current_state: CurrentState,
                               message: Message, image: str) -> Message:
+
         photo = await current_state.state_photo(image=image)
-        instance = await message.answer_photo(photo=photo,
-                                              reply_markup=DropdownMenu.placeholder_menu(
-                                                  current_menu=await current_state.get_placeholder()
-                                              ))
-        return instance
+        async with current_state.state.proxy() as data:
+            data.update(
+                {"context_manager": await message.answer_photo(photo=photo,
+                                                               reply_markup=DropdownMenu.placeholder_menu(
+                                                                   current_menu=await current_state.get_placeholder()
+                                                               ))}
+            )
 
     @classmethod
     async def edit_context_manager(cls, current_state: CurrentState,
                                    message: Message):
-        file_id = message.photo[-1]["file_id"]
+        print(await current_state.get_name())
+        file_id = message.photo[0]["file_id"]
         await message.edit_media(media=InputMediaPhoto(
                 media=file_id
             ),

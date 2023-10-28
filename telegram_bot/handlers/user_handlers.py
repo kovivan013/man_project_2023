@@ -58,11 +58,6 @@ class MyProfileMH:
     utils = HandlersUtils()
 
     @classmethod
-    async def menu_manager(cls, message: Message, state: FSMContext) -> None:
-        await message
-
-
-    @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile,
@@ -73,8 +68,7 @@ class MyProfileMH:
         context_manager = await cls.utils.context_manager(current_state=current_state,
                                                           message=message,
                                                           image="dashboard_profile")
-        async with state.proxy() as data:
-            data["context_manager"]: Message = context_manager
+
 
 
         # image = open('img/dashboard_profile.png', 'rb')
@@ -94,21 +88,16 @@ class MyProfileMH:
     async def my_gigs(cls, callback: CallbackQuery, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile)
-        await ProfileStates.info_about.set()
-        image = open('img/dashboard_profile.png', 'rb')
-        await bot.send_photo(chat_id=message.chat.id,
-                             photo=image,
-                             caption="Test input message to keyboards select menu",
-                             reply_markup=DropdownMenu.placeholder_menu(
-                                 current_menu=await current_state.get_placeholder()
-                             )
-                             )
-
-        # TODO: function menu
-        image = open('img/test35459468345687456.png', 'rb')
-        await message.answer_photo(caption=f"TODO: MENU",
-                                   photo=image
-                                   )
+        await ProfileStates.gigs.set()
+        # image = open('img/dashboard_profile.png', 'rb')
+        await cls.utils.edit_context_manager(current_state=current_state,
+                                             message=callback.message)
+        #
+        # # TODO: function menu
+        # image = open('img/test35459468345687456.png', 'rb')
+        # await message.answer_photo(caption=f"TODO: MENU",
+        #                            photo=image
+        #                            )
 
 
 
@@ -130,15 +119,7 @@ class Test:
                 buttons=await current_state.get_buttons()
             )
         )
-        # await ProfileStates.select_menu.set()
-        async with state.proxy() as data:
-            msg = data["context_manager"]
-            await cls.utils.edit_context_manager(current_state=current_state,
-                                                 message=msg)
-        # reply_markup = DropdownMenu.menu_keyboard(
-        #     state=state_name,
-        #     buttons=MyProfile().get_buttons()
-        # )
+        await ProfileStates.select_menu.set()
 
     @classmethod
     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
@@ -178,4 +159,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         MyProfileMH.info_about, Text(equals=MyProfile().info_about_callback), state=ProfileStates.select_menu
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.my_gigs, Text(equals=MyProfile().gigs_callback), state=ProfileStates.select_menu
     )
