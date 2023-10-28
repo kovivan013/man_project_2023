@@ -54,7 +54,6 @@ class HandlersUtils:
     @classmethod
     async def edit_context_manager(cls, current_state: CurrentState,
                                    message: Message):
-        print(await current_state.get_name())
         file_id = message.photo[0]["file_id"]
         await message.edit_media(media=InputMediaPhoto(
                 media=file_id

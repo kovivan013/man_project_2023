@@ -58,16 +58,37 @@ class MyProfileMH:
     utils = HandlersUtils()
 
     @classmethod
+    async def context_manager(cls, message: Message, state: FSMContext) -> None:
+        current_state = CurrentState(state,
+                                     MyProfile,
+                                     ProfileStates)
+        await ProfileStates.info_about.set()
+        await cls.utils.context_manager(current_state=current_state,
+                                        message=message,
+                                        image="dashboard_profile")
+        await cls.info_about(message=message,
+                             state=state)
+
+
+    @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile,
                                      ProfileStates)
+        await ProfileStates.info_about.set()
+        async with state.proxy() as data:
+            callback_message: Message = data["context_manager"]
+
+
+
         # await current_state.context_manager(message=message,
         #                                     image="dashboard_profile")
-        await ProfileStates.info_about.set()
-        context_manager = await cls.utils.context_manager(current_state=current_state,
-                                                          message=message,
-                                                          image="dashboard_profile")
+
+
+        # await ProfileStates.info_about.set()
+        # context_manager = await cls.utils.context_manager(current_state=current_state,
+        #                                                   message=message,
+        #                                                   image="dashboard_profile")
 
 
 
@@ -80,24 +101,31 @@ class MyProfileMH:
         #                      )
         # TODO: function menu
         image = open('img/test35459468345687456.png', 'rb')
-        await message.answer_photo(caption=f"TODO: MENU",
+        await callback_message.answer_photo(caption=f"TODO: MENU",
                                    photo=image
                                    )
 
     @classmethod
-    async def my_gigs(cls, callback: CallbackQuery, state: FSMContext) -> None:
+    async def my_gigs(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile)
+
+        async with state.proxy() as data:
+            callback_message: Message = data["context_manager"]
+
+
         await ProfileStates.gigs.set()
         # image = open('img/dashboard_profile.png', 'rb')
-        await cls.utils.edit_context_manager(current_state=current_state,
-                                             message=callback.message)
+        # await cls.utils.edit_context_manager(current_state=current_state,
+        #                                      message=message)
         #
         # # TODO: function menu
-        # image = open('img/test35459468345687456.png', 'rb')
-        # await message.answer_photo(caption=f"TODO: MENU",
-        #                            photo=image
-        #                            )
+        image = open('img/test35459468345687456.png', 'rb')
+        await callback_message.answer_photo(caption=f"TODO: MENU",
+                                   photo=image
+                                   )
+
+
 
 
 
@@ -162,4 +190,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         MyProfileMH.my_gigs, Text(equals=MyProfile().gigs_callback), state=ProfileStates.select_menu
+    )
+    dp.register_message_handler(
+        MyProfileMH.context_manager, Text(equals="1"), state=["*"]
     )
