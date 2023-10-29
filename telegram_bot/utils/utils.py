@@ -27,12 +27,14 @@
 # dog = Dog(ag)
 from dataclasses import dataclass
 from typing import Union
-from man_project_2023.telegram_bot.states.states import CurrentState
+from man_project_2023.telegram_bot.states.states import CurrentState, ProfileStates
 from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
-from aiogram.types import Message, InputMediaPhoto
+from aiogram.types import Message, InputMediaPhoto, CallbackQuery
+from aiogram.dispatcher.storage import FSMContext
 
 class Utils:
     pass
+
 
 
 class HandlersUtils:
@@ -47,7 +49,7 @@ class HandlersUtils:
             data.update(
                 {"context_manager": await message.answer_photo(photo=photo,
                                                                reply_markup=DropdownMenu.placeholder_menu(
-                                                                   current_menu=await current_state.get_placeholder()
+                                                                   current_menu=await current_state.get_placeholder(required_state=ProfileStates.gigs)
                                                                ))}
             )
 

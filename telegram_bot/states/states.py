@@ -49,18 +49,20 @@ class CurrentState:
 
         return buttons_list
 
-    async def get_placeholder(self):
+    async def get_placeholder(self, required_state: State = None):
         buttons = vars(await self.get_class())
         state = await self.get_name()
         callback: str = "placeholder_callback"
 
-        return {"text": f"✅ {buttons[state]} ▼",
+        return {"text": f"✅ {buttons[state] if required_state is None else buttons[required_state._state]} ▼",
                 "callback_data": callback}
 
     async def state_photo(self, image: str):
         path: str = f"img/states_images/{image}.png"
         photo = open(path, "rb")
         return photo
+
+
 
 
 class ProfileStates(StatesGroup):

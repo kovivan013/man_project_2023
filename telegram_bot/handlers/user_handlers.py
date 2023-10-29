@@ -1,12 +1,55 @@
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.types.input_media import InputMediaPhoto
 from aiogram.dispatcher.storage import FSMContext
-from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState
+from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState, State
 from man_project_2023.telegram_bot.utils.utils import HandlersUtils
 from aiogram.dispatcher.filters import Text
 from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
+
+
+class ContextManager:
+
+    message: Message = None
+    usages_counter = False
+
+    @classmethod
+    async def send(cls, current_state: CurrentState,
+                   required_state: State, image: str):
+        photo = await current_state.state_photo(image=image)
+        cls.message = await bot.send_photo(chat_id=current_state.state.chat,
+                                           photo=photo,
+                                           reply_markup=DropdownMenu.placeholder_menu(
+                                               current_menu=await current_state.get_placeholder(
+                                                   required_state=required_state
+                                               )
+                                           ))
+
+    @classmethod
+    async def select(cls):
+        pass
+
+    @classmethod
+    async def edit(cls, current_state: CurrentState,
+                   image: str):
+        if cls.usages_counter:
+            media = await current_state.state_photo(image=image)
+            await cls.message.edit_media(media=InputMediaPhoto(
+                media=media
+            ),
+            reply_markup=DropdownMenu.placeholder_menu(
+                current_menu=await current_state.get_placeholder()
+            ))
+        cls.usages_counter = True
+
+    @classmethod
+    async def delete(cls):
+        pass
+
+    @classmethod
+    async def reset_data(cls):
+        cls.usages_counter = 0
 
 class RegisterMH:
     pass
@@ -56,16 +99,18 @@ class StartMH:
 class MyProfileMH:
 
     utils = HandlersUtils()
+    context_manager1 = ContextManager()
 
     @classmethod
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile,
                                      ProfileStates)
-        await ProfileStates.info_about.set()
-        await cls.utils.context_manager(current_state=current_state,
-                                        message=message,
-                                        image="dashboard_profile")
+        await cls.context_manager1.send(current_state=current_state,
+                                       required_state=ProfileStates.info_about,
+                                       image="dashboard_profile")
+
+        await ProfileStates.gigs.set()
         await cls.info_about(message=message,
                              state=state)
 
@@ -76,11 +121,8 @@ class MyProfileMH:
                                      MyProfile,
                                      ProfileStates)
         await ProfileStates.info_about.set()
-        async with state.proxy() as data:
-            callback_message: Message = data["context_manager"]
-
-
-
+        # async with state.proxy() as data:
+        #     callback_message: Message = data["context_manager"]
         # await current_state.context_manager(message=message,
         #                                     image="dashboard_profile")
 
@@ -100,31 +142,32 @@ class MyProfileMH:
         #                      )
         #                      )
         # TODO: function menu
+        await cls.context_manager1.edit(current_state=current_state,
+                                        image="dashboard_profile")
         image = open('img/test35459468345687456.png', 'rb')
-        await callback_message.answer_photo(caption=f"TODO: MENU",
-                                   photo=image
-                                   )
+        # await bot.send_photo(chat_id=state.chat,
+        #                      caption="text",
+        #                      photo=image)
 
     @classmethod
     async def my_gigs(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile)
-
-        async with state.proxy() as data:
-            callback_message: Message = data["context_manager"]
-
-
         await ProfileStates.gigs.set()
+        # async with state.proxy() as data:
+        #     callback_message: Message = data["context_manager"]
+
         # image = open('img/dashboard_profile.png', 'rb')
         # await cls.utils.edit_context_manager(current_state=current_state,
         #                                      message=message)
         #
         # # TODO: function menu
+        await cls.context_manager1.edit(current_state=current_state,
+                                        image="dashboard_profile")
         image = open('img/test35459468345687456.png', 'rb')
-        await callback_message.answer_photo(caption=f"TODO: MENU",
-                                   photo=image
-                                   )
-
+        # await bot.send_photo(chat_id=state.chat,
+        #                      caption="text",
+        #                      photo=image)
 
 
 
