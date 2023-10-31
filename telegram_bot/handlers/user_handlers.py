@@ -1,3 +1,6 @@
+import datetime
+
+import aiogram.types
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.types.input_media import InputMediaPhoto
 from aiogram.dispatcher.storage import FSMContext
@@ -27,8 +30,16 @@ class ContextManager:
                                            ))
 
     @classmethod
-    async def select(cls):
-        pass
+    async def select(cls, current_state: CurrentState):
+        image = open('img/test35459468345687456.png', 'rb')
+        await cls.message.edit_media(media=InputMediaPhoto(
+            media=image,
+            caption=f"💻 *Оберіть необхідне меню:*",
+            parse_mode="Markdown"
+        ),
+            reply_markup=DropdownMenu.menu_keyboard(
+                buttons=await current_state.get_buttons()
+        ))
 
     @classmethod
     async def edit(cls, current_state: CurrentState,
@@ -45,11 +56,12 @@ class ContextManager:
 
     @classmethod
     async def delete(cls):
-        pass
+        await cls.message.delete()
+        await cls.reset_data()
 
     @classmethod
     async def reset_data(cls):
-        cls.usages_counter = 0
+        cls.usages_counter = False
 
 class RegisterMH:
     pass
@@ -96,21 +108,29 @@ class StartMH:
         else:
             await cls.seeker.cls_menu(message)
 
+
+
 class MyProfileMH:
 
     utils = HandlersUtils()
-    context_manager1 = ContextManager()
+    __context_manager = ContextManager()
+
+    @classmethod
+    async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        current_state = CurrentState(state,
+                                     MyProfile,
+                                     ProfileStates)
+        await cls.__context_manager.select(current_state=current_state)
+        await ProfileStates.select_menu.set()
 
     @classmethod
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
         current_state = CurrentState(state,
                                      MyProfile,
                                      ProfileStates)
-        await cls.context_manager1.send(current_state=current_state,
-                                       required_state=ProfileStates.info_about,
-                                       image="dashboard_profile")
-
-        await ProfileStates.gigs.set()
+        await cls.__context_manager.send(current_state=current_state,
+                                         required_state=ProfileStates.info_about,
+                                         image="dashboard_profile")
         await cls.info_about(message=message,
                              state=state)
 
@@ -121,29 +141,8 @@ class MyProfileMH:
                                      MyProfile,
                                      ProfileStates)
         await ProfileStates.info_about.set()
-        # async with state.proxy() as data:
-        #     callback_message: Message = data["context_manager"]
-        # await current_state.context_manager(message=message,
-        #                                     image="dashboard_profile")
-
-
-        # await ProfileStates.info_about.set()
-        # context_manager = await cls.utils.context_manager(current_state=current_state,
-        #                                                   message=message,
-        #                                                   image="dashboard_profile")
-
-
-
-        # image = open('img/dashboard_profile.png', 'rb')
-        # await bot.send_photo(chat_id=message.chat.id,
-        #                      photo=await current_state.state_photo(image="dashboard_profile"),
-        #                      reply_markup=DropdownMenu.placeholder_menu(
-        #                          current_menu=await current_state.get_placeholder()
-        #                      )
-        #                      )
-        # TODO: function menu
-        await cls.context_manager1.edit(current_state=current_state,
-                                        image="dashboard_profile")
+        await cls.__context_manager.edit(current_state=current_state,
+                                         image="dashboard_profile")
         image = open('img/test35459468345687456.png', 'rb')
         # await bot.send_photo(chat_id=state.chat,
         #                      caption="text",
@@ -154,63 +153,92 @@ class MyProfileMH:
         current_state = CurrentState(state,
                                      MyProfile)
         await ProfileStates.gigs.set()
-        # async with state.proxy() as data:
-        #     callback_message: Message = data["context_manager"]
+        await cls.__context_manager.edit(current_state=current_state,
+                                         image="dashboard_profile")
+        preview = open('img/423.png', 'rb')
+        await bot.send_photo(chat_id=state.chat,
+                             caption="Я знайшов *чорну куртку*.\n"
+                                     "📍 *Кременчук*\n"
+                                     "⌚ *Сьогодні, об 16:56*",
+                             photo=preview,
+                             reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                             parse_mode="Markdown")
+        preview = open('img/sh.png', 'rb')
+        await bot.send_photo(chat_id=state.chat,
+                             caption="Я знайшов *шапку*.\n"
+                                     "📍 *Кременчук*\n"
+                                     "⌚ *Учора, об 11:32*",
+                             photo=preview,
+                             reply_markup={
+                                 "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                             parse_mode="Markdown")
+        preview = open('img/pas.png', 'rb')
+        await bot.send_photo(chat_id=state.chat,
+                             caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
+                                     "📍 *Кременчук*\n"
+                                     "⌚ *25.10.23*",
+                             photo=preview,
+                             reply_markup={
+                                 "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
+                                                     [{"text": "Додати оголошення ➕", "callback_data": "375423t6"}]]},
+                             parse_mode="Markdown")
 
-        # image = open('img/dashboard_profile.png', 'rb')
-        # await cls.utils.edit_context_manager(current_state=current_state,
-        #                                      message=message)
-        #
-        # # TODO: function menu
-        await cls.context_manager1.edit(current_state=current_state,
-                                        image="dashboard_profile")
-        image = open('img/test35459468345687456.png', 'rb')
-        # await bot.send_photo(chat_id=state.chat,
-        #                      caption="text",
-        #                      photo=image)
+async def loc(message: Message, state: FSMContext) -> None:
+    print(message.location)
+    from aiogram.types import LoginUrl
+    login_url = LoginUrl(
+        url="https://www.roblox.com/"
+    )
+    reply = aiogram.types.InlineKeyboardMarkup().add(aiogram.types.InlineKeyboardButton(
+        text="test",
+        login_url=login_url
+    ))
+    await bot.send_location(chat_id=state.chat,
+                            protect_content=True,
+                            latitude=message.location.latitude,
+                            longitude=message.location.longitude,
+                            reply_markup=reply
+                            )
 
-
-
-
-class Test:
-
-    utils = HandlersUtils()
-
-    @classmethod
-    async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        current_state = CurrentState(state,
-                                     MyProfile)
-        image = open('img/test35459468345687456.png', 'rb')
-        await callback.message.edit_media(media=InputMediaPhoto(
-            media=image,
-            caption=f"💻 *Оберіть необхідне меню:*",
-            parse_mode="Markdown"
-        ),
-            reply_markup=DropdownMenu.menu_keyboard(
-                buttons=await current_state.get_buttons()
-            )
-        )
-        await ProfileStates.select_menu.set()
-
-    @classmethod
-    async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
-        current_state = CurrentState(state,
-                                     MyProfile)
-
-
-        image = open('img/dashboard_profile.png', 'rb')
-        await ProfileStates.gigs.set()
-        await bot.send_photo(chat_id=message.chat.id,
-                             photo=image,
-                             caption="Test input message to keyboards select menu",
-                             reply_markup=DropdownMenu.placeholder_menu(
-                                 current_menu=await current_state.get_placeholder()
-                             )
-                             )
-        image = open('img/test35459468345687456.png', 'rb')
-        await message.answer_photo(caption=f"Test caption",
-                                   photo=image
-                                   )
+# class Test:
+#
+#     utils = HandlersUtils()
+#
+#     @classmethod
+#     async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+#         current_state = CurrentState(state,
+#                                      MyProfile)
+#         image = open('img/test35459468345687456.png', 'rb')
+#         await callback.message.edit_media(media=InputMediaPhoto(
+#             media=image,
+#             caption=f"💻 *Оберіть необхідне меню:*",
+#             parse_mode="Markdown"
+#         ),
+#             reply_markup=DropdownMenu.menu_keyboard(
+#                 buttons=await current_state.get_buttons()
+#             )
+#         )
+#         await ProfileStates.select_menu.set()
+#
+#     @classmethod
+#     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
+#         current_state = CurrentState(state,
+#                                      MyProfile)
+#
+#
+#         image = open('img/dashboard_profile.png', 'rb')
+#         await ProfileStates.gigs.set()
+#         await bot.send_photo(chat_id=message.chat.id,
+#                              photo=image,
+#                              caption="Test input message to keyboards select menu",
+#                              reply_markup=DropdownMenu.placeholder_menu(
+#                                  current_menu=await current_state.get_placeholder()
+#                              )
+#                              )
+#         image = open('img/test35459468345687456.png', 'rb')
+#         await message.answer_photo(caption=f"Test caption",
+#                                    photo=image
+#                                    )
 
 class UserProfileMH:
     pass
@@ -220,20 +248,21 @@ def register_user_handlers(dp: Dispatcher) -> None:
         StartMH.cls_menu, commands=["start"], state=None
     )
     dp.register_message_handler(
-        MyProfileMH.info_about, commands=["profile"], state=None
+        MyProfileMH.context_manager, commands=["profile"], state=None
     )
+
     dp.register_message_handler(
-        Test.input_kb_func, commands=["test"], state=None
+        loc, content_types=aiogram.types.ContentTypes.LOCATION, state=["*"]
     )
     dp.register_callback_query_handler(
-        Test.keyboards_menu, Text(equals="placeholder_callback"), state=["*"]
+        MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.info_about
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.gigs
     )
     dp.register_callback_query_handler(
         MyProfileMH.info_about, Text(equals=MyProfile().info_about_callback), state=ProfileStates.select_menu
     )
     dp.register_callback_query_handler(
         MyProfileMH.my_gigs, Text(equals=MyProfile().gigs_callback), state=ProfileStates.select_menu
-    )
-    dp.register_message_handler(
-        MyProfileMH.context_manager, Text(equals="1"), state=["*"]
     )

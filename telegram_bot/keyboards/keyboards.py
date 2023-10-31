@@ -167,6 +167,8 @@ class DropdownMenu:
         keyboard = default_inline_keyboard(row_width=1)
 
         keyboard.add(
+            InlineKeyboardButton(text=f"Режим Детектива 🔦",
+                                 callback_data="change_mode"),
             InlineKeyboardButton(**current_menu)
         )
 
