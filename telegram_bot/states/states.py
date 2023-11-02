@@ -68,6 +68,8 @@ class CurrentState:
 class ProfileStates(StatesGroup):
     info_about = State()
     gigs = State()
+    username = State()
+    description = State()
     select_menu = State()
 
     # @classmethod

@@ -2,92 +2,103 @@ import datetime
 
 import aiogram.types
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
-from aiogram.types.input_media import InputMediaPhoto
+from aiogram.types.input_media import InputMediaPhoto, InputFile
 from aiogram.dispatcher.storage import FSMContext
 from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState, State
 from man_project_2023.telegram_bot.utils.utils import HandlersUtils
 from aiogram.dispatcher.filters import Text
-from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu
+from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 
 
+
 class ContextManager:
 
-    message: Message = None
-    messages_to_delete: list[Message] = []
-    previous_state: str = None
-    is_used = False
 
-    @classmethod
-    async def send(cls, current_state: CurrentState,
+    def __init__(self):
+        self.current_state: CurrentState = None
+        self.message: Message = None
+        self.messages_to_delete: list[Message] = []
+        self.previous_state: str = None
+        self.is_used = False
+
+    async def send(self, current_state: CurrentState,
                    required_state: State, image: str):
-        photo = await current_state.state_photo(image=image)
-        cls.message = await bot.send_photo(chat_id=current_state.state.chat,
-                                           photo=photo,
-                                           reply_markup=DropdownMenu.placeholder_menu(
-                                               current_menu=await current_state.get_placeholder(
+        self.current_state = current_state
+        photo = await self.current_state.state_photo(image=image)
+        self.message = await bot.send_photo(chat_id=self.current_state.state.chat,
+                                            photo=photo,
+                                            reply_markup=DropdownMenu.placeholder_menu(
+                                               current_menu=await self.current_state.get_placeholder(
                                                    required_state=required_state
                                                )
                                            ))
 
-    @classmethod
-    async def select(cls, current_state: CurrentState):
-        await cls.set_previous_state(current_state=current_state)
+
+    async def select(self, current_state: CurrentState = None,
+                     delete_messages: bool = False):
+        if current_state is not None:
+            self.current_state = current_state
+        if delete_messages:
+            await self.delete_context_messages()
+
+        await self.set_previous_state()
         image = open('img/test35459468345687456.png', 'rb')
-        await cls.message.edit_media(media=InputMediaPhoto(
+        await self.message.edit_media(media=InputMediaPhoto(
             media=image,
             caption=f"💻 *Оберіть необхідне меню:*",
             parse_mode="Markdown"
         ),
             reply_markup=DropdownMenu.menu_keyboard(
-                buttons=await current_state.get_buttons()
+                buttons=await self.current_state.get_buttons()
         ))
 
-    @classmethod
-    async def edit(cls, current_state: CurrentState,
-                   image: str):
-        if cls.is_used:
 
-            if not await cls.states_equals():
-                await cls.delete_context_messages(current_state=current_state)
+    async def edit(self, image: str):
+        if self.is_used:
 
-            media = await current_state.state_photo(image=image)
-            await cls.message.edit_media(media=InputMediaPhoto(
+            if not await self.states_equals():
+                await self.delete_context_messages()
+
+            media = await self.current_state.state_photo(image=image)
+            await self.message.edit_media(media=InputMediaPhoto(
                 media=media
             ),
                 reply_markup=DropdownMenu.placeholder_menu(
-                    current_menu=await current_state.get_placeholder()
+                    current_menu=await self.current_state.get_placeholder()
                 ))
-        cls.is_used = True
+        self.is_used = True
 
-    @classmethod
-    async def appent_delete_list(cls, message: Message):
-        cls.messages_to_delete.append(message.message_id)
 
-    @classmethod
-    async def delete_context_messages(cls, current_state: CurrentState):
-        for i in cls.messages_to_delete:
-            await bot.delete_message(chat_id=current_state.state.chat,
-                                     message_id=i)
-        cls.messages_to_delete.clear()
+    async def appent_delete_list(self, message: Message):
+        self.messages_to_delete.append(message.message_id)
 
-    @classmethod
-    async def set_previous_state(cls, current_state):
-        cls.previous_state = await current_state.get_name()
 
-    @classmethod
-    async def states_equals(cls, current_state: CurrentState) -> bool:
-        return cls.previous_state == await current_state.get_name()
+    async def delete_context_messages(self):
+        for message_id in self.messages_to_delete:
+            await bot.delete_message(chat_id=self.current_state.state.chat,
+                                     message_id=message_id)
+        self.messages_to_delete.clear()
 
-    @classmethod
-    async def delete(cls):
-        await cls.message.delete()
-        cls.reset_data()
 
-    @classmethod
-    def reset_data(cls):
-        cls.is_used = False
+    async def set_previous_state(self):
+        self.previous_state = await self.current_state.get_name()
+
+
+    async def states_equals(self) -> bool:
+        return self.previous_state == await self.current_state.get_name()
+
+
+    async def delete(self):
+        await self.message.delete()
+        self.reset_data()
+
+
+    def reset_data(self):
+        self.is_used = False
+
+
 
 class RegisterMH:
     pass
@@ -143,17 +154,19 @@ class MyProfileMH:
 
     @classmethod
     async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        current_state = CurrentState(state,
-                                     MyProfile,
-                                     ProfileStates)
-        await cls.__context_manager.select(current_state=current_state)
+        current_state = CurrentState(state=state,
+                                     keyboard_class=MyProfile,
+                                     state_class=ProfileStates)
+
+        await cls.__context_manager.select()
         await ProfileStates.select_menu.set()
 
     @classmethod
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
-        current_state = CurrentState(state,
-                                     MyProfile,
-                                     ProfileStates)
+        current_state = CurrentState(state=state,
+                                     keyboard_class=MyProfile,
+                                     state_class=ProfileStates)
+
         await cls.__context_manager.send(current_state=current_state,
                                          required_state=ProfileStates.info_about,
                                          image="dashboard_profile")
@@ -163,87 +176,80 @@ class MyProfileMH:
 
     @classmethod
     async def info_about(cls, message: Message, state: FSMContext) -> None:
-        current_state = CurrentState(state,
-                                     MyProfile,
-                                     ProfileStates)
+        current_state = CurrentState(state=state,
+                                     keyboard_class=MyProfile,
+                                     state_class=ProfileStates)
+
         await ProfileStates.info_about.set()
-        await cls.__context_manager.edit(current_state=current_state,
-                                         image="dashboard_profile")
+        await cls.__context_manager.edit(image="dashboard_profile")
         image = open('img/reg_data_board.png', 'rb')
 
-
-        await cls.__context_manager.appent_delete_list(
-            await bot.send_photo(chat_id=state.chat,
-                                 caption="📃 *Опис*"
-                                         "\n\n"
-                                         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ornare massa sapien, a feugiat nisi dignissim in. Integer non est dignissim, vehicula odio eget."
-                                         "\n\n"
-                                         "⭐ *Досягнення*"
-                                         "\n\n"
-                                         "Недоступно",
-                                 photo=image,
-                                 parse_mode="Markdown")
-        )
+        if not await cls.__context_manager.states_equals():
+            await cls.__context_manager.appent_delete_list(
+                await bot.send_photo(chat_id=state.chat,
+                                     caption="📃 *Опис*"
+                                             "\n\n"
+                                             "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ornare massa sapien, a feugiat nisi dignissim in. Integer non est dignissim, vehicula odio eget."
+                                             "\n\n"
+                                             "⭐ *Досягнення*"
+                                             "\n\n"
+                                             "Недоступно",
+                                     photo=image,
+                                     parse_mode="Markdown",
+                                     reply_markup=MyProfile.info_about_keyboard())
+            )
 
 
 
     @classmethod
     async def my_gigs(cls, message: Message, state: FSMContext) -> None:
-        current_state = CurrentState(state,
-                                     MyProfile)
+        current_state = CurrentState(state=state,
+                                     keyboard_class=MyProfile,
+                                     state_class=ProfileStates)
         await ProfileStates.gigs.set()
-        await cls.__context_manager.edit(current_state=current_state,
-                                         image="dashboard_profile")
-        preview = open('img/423.png', 'rb')
-        await cls.__context_manager.appent_delete_list(
-            await bot.send_photo(chat_id=state.chat,
-                                 caption="Я знайшов *чорну куртку*.\n"
-                                         "📍 *Кременчук*\n"
-                                         "⌚ *Сьогодні, об 16:56*",
-                                 photo=preview,
-                                 reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                                 parse_mode="Markdown")
-        )
-        preview = open('img/sh.png', 'rb')
-        await cls.__context_manager.appent_delete_list(
-            await bot.send_photo(chat_id=state.chat,
-                                 caption="Я знайшов *шапку*.\n"
-                                         "📍 *Кременчук*\n"
-                                         "⌚ *Учора, об 11:32*",
-                                 photo=preview,
-                                 reply_markup={
-                                     "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                                 parse_mode="Markdown")
-        )
-        preview = open('img/pas.png', 'rb')
-        await cls.__context_manager.appent_delete_list(
-            await bot.send_photo(chat_id=state.chat,
-                                 caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
-                                         "📍 *Кременчук*\n"
-                                         "⌚ *25.10.23*",
-                                 photo=preview,
-                                 reply_markup={
-                                     "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
-                                                         [{"text": "Додати оголошення ➕", "callback_data": "375423t6"}]]},
-                                 parse_mode="Markdown")
-        )
+        await cls.__context_manager.edit(image="dashboard_profile")
+        if not await cls.__context_manager.states_equals():
+            preview = open('img/423.png', 'rb')
+            await cls.__context_manager.appent_delete_list(
+                await bot.send_photo(chat_id=state.chat,
+                                     caption="Я знайшов *чорну куртку*.\n"
+                                             "📍 *Кременчук*\n"
+                                             "⌚ *Сьогодні, об 16:56*",
+                                     photo=preview,
+                                     reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                                     parse_mode="Markdown")
+            )
+            preview = open('img/sh.png', 'rb')
+            await cls.__context_manager.appent_delete_list(
+                await bot.send_photo(chat_id=state.chat,
+                                     caption="Я знайшов *шапку*.\n"
+                                             "📍 *Кременчук*\n"
+                                             "⌚ *Учора, об 11:32*",
+                                     photo=preview,
+                                     reply_markup={
+                                         "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                                     parse_mode="Markdown")
+            )
+            preview = open('img/pas.png', 'rb')
+            await cls.__context_manager.appent_delete_list(
+                await bot.send_photo(chat_id=state.chat,
+                                     caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
+                                             "📍 *Кременчук*\n"
+                                             "⌚ *25.10.23*",
+                                     photo=preview,
+                                     reply_markup={
+                                         "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
+                                                             [{"text": "Додати оголошення ➕", "callback_data": "375423t6"}]]},
+                                     parse_mode="Markdown")
+            )
 
-async def loc(message: Message, state: FSMContext) -> None:
-    print(message.location)
-    from aiogram.types import LoginUrl
-    login_url = LoginUrl(
-        url="https://www.roblox.com/"
-    )
-    reply = aiogram.types.InlineKeyboardMarkup().add(aiogram.types.InlineKeyboardButton(
-        text="test",
-        login_url=login_url
-    ))
-    await bot.send_location(chat_id=state.chat,
-                            protect_content=True,
-                            latitude=message.location.latitude,
-                            longitude=message.location.longitude,
-                            reply_markup=reply
-                            )
+
+    @classmethod
+    async def edit_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        current_state = CurrentState(state=state,
+                                     keyboard_class=UpdateProfile,
+                                     state_class=ProfileStates)
+        await cls.__context_manager.select(current_state=current_state)
 
 # class Test:
 #
@@ -295,10 +301,6 @@ def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(
         MyProfileMH.context_manager, commands=["profile"], state=None
     )
-
-    dp.register_message_handler(
-        loc, content_types=aiogram.types.ContentTypes.LOCATION, state=["*"]
-    )
     dp.register_callback_query_handler(
         MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.info_about
     )
@@ -310,4 +312,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         MyProfileMH.my_gigs, Text(equals=MyProfile().gigs_callback), state=ProfileStates.select_menu
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.edit_menu, Text(equals=MyProfile.update_callback), state=ProfileStates.info_about
     )

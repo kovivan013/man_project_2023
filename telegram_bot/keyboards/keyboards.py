@@ -234,4 +234,42 @@ class MyProfile:
         self.gigs_callback: str = f"gigs_callback"
 
 
-#   TODO: keyboards
+    update: str = f"🖊 Змінити"
+    share: str = f"🔗 Поділитися"
+
+    update_callback: str = f"🖊 Змінити"
+    share_callback: str = f"🔗 Поділитися"
+
+    @classmethod
+    def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.update,
+                                 callback_data=cls.update_callback),
+            InlineKeyboardButton(text=cls.share,
+                                 callback_data=cls.share_callback)
+        )
+
+        return keyboard
+
+
+class UpdateProfile:
+
+    def __init__(self):
+        self.username: str = f"✏️ Нікнейм"
+        self.description: str = f"📝 Опис"
+
+        self.username_callback: str = f"username_callback"
+        self.description_callback: str = f"description_callback"
+
+    # @classmethod
+    # def keyboard(cls) -> Union[InlineKeyboardMarkup]:
+    #     keyboard = default_inline_keyboard(row_width=1)
+    #
+    #     keyboard.add(
+    #         InlineKeyboardButton(text=cls.backward,
+    #                              callback_data=cls.backward_callback)
+    #     )
+    #
+    #     return keyboard
