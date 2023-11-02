@@ -15,7 +15,9 @@ from man_project_2023.telegram_bot.config import bot, Dispatcher
 class ContextManager:
 
     message: Message = None
-    usages_counter = False
+    messages_to_delete: list[Message] = []
+    previous_state: str = None
+    is_used = False
 
     @classmethod
     async def send(cls, current_state: CurrentState,
@@ -31,6 +33,7 @@ class ContextManager:
 
     @classmethod
     async def select(cls, current_state: CurrentState):
+        await cls.set_previous_state(current_state=current_state)
         image = open('img/test35459468345687456.png', 'rb')
         await cls.message.edit_media(media=InputMediaPhoto(
             media=image,
@@ -44,24 +47,47 @@ class ContextManager:
     @classmethod
     async def edit(cls, current_state: CurrentState,
                    image: str):
-        if cls.usages_counter:
+        if cls.is_used:
+
+            if not await cls.states_equals():
+                await cls.delete_context_messages(current_state=current_state)
+
             media = await current_state.state_photo(image=image)
             await cls.message.edit_media(media=InputMediaPhoto(
                 media=media
             ),
-            reply_markup=DropdownMenu.placeholder_menu(
-                current_menu=await current_state.get_placeholder()
-            ))
-        cls.usages_counter = True
+                reply_markup=DropdownMenu.placeholder_menu(
+                    current_menu=await current_state.get_placeholder()
+                ))
+        cls.is_used = True
+
+    @classmethod
+    async def appent_delete_list(cls, message: Message):
+        cls.messages_to_delete.append(message.message_id)
+
+    @classmethod
+    async def delete_context_messages(cls, current_state: CurrentState):
+        for i in cls.messages_to_delete:
+            await bot.delete_message(chat_id=current_state.state.chat,
+                                     message_id=i)
+        cls.messages_to_delete.clear()
+
+    @classmethod
+    async def set_previous_state(cls, current_state):
+        cls.previous_state = await current_state.get_name()
+
+    @classmethod
+    async def states_equals(cls, current_state: CurrentState) -> bool:
+        return cls.previous_state == await current_state.get_name()
 
     @classmethod
     async def delete(cls):
         await cls.message.delete()
-        await cls.reset_data()
+        cls.reset_data()
 
     @classmethod
-    async def reset_data(cls):
-        cls.usages_counter = False
+    def reset_data(cls):
+        cls.is_used = False
 
 class RegisterMH:
     pass
@@ -143,10 +169,23 @@ class MyProfileMH:
         await ProfileStates.info_about.set()
         await cls.__context_manager.edit(current_state=current_state,
                                          image="dashboard_profile")
-        image = open('img/test35459468345687456.png', 'rb')
-        # await bot.send_photo(chat_id=state.chat,
-        #                      caption="text",
-        #                      photo=image)
+        image = open('img/reg_data_board.png', 'rb')
+
+
+        await cls.__context_manager.appent_delete_list(
+            await bot.send_photo(chat_id=state.chat,
+                                 caption="📃 *Опис*"
+                                         "\n\n"
+                                         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ornare massa sapien, a feugiat nisi dignissim in. Integer non est dignissim, vehicula odio eget."
+                                         "\n\n"
+                                         "⭐ *Досягнення*"
+                                         "\n\n"
+                                         "Недоступно",
+                                 photo=image,
+                                 parse_mode="Markdown")
+        )
+
+
 
     @classmethod
     async def my_gigs(cls, message: Message, state: FSMContext) -> None:
@@ -156,32 +195,38 @@ class MyProfileMH:
         await cls.__context_manager.edit(current_state=current_state,
                                          image="dashboard_profile")
         preview = open('img/423.png', 'rb')
-        await bot.send_photo(chat_id=state.chat,
-                             caption="Я знайшов *чорну куртку*.\n"
-                                     "📍 *Кременчук*\n"
-                                     "⌚ *Сьогодні, об 16:56*",
-                             photo=preview,
-                             reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                             parse_mode="Markdown")
+        await cls.__context_manager.appent_delete_list(
+            await bot.send_photo(chat_id=state.chat,
+                                 caption="Я знайшов *чорну куртку*.\n"
+                                         "📍 *Кременчук*\n"
+                                         "⌚ *Сьогодні, об 16:56*",
+                                 photo=preview,
+                                 reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                                 parse_mode="Markdown")
+        )
         preview = open('img/sh.png', 'rb')
-        await bot.send_photo(chat_id=state.chat,
-                             caption="Я знайшов *шапку*.\n"
-                                     "📍 *Кременчук*\n"
-                                     "⌚ *Учора, об 11:32*",
-                             photo=preview,
-                             reply_markup={
-                                 "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                             parse_mode="Markdown")
+        await cls.__context_manager.appent_delete_list(
+            await bot.send_photo(chat_id=state.chat,
+                                 caption="Я знайшов *шапку*.\n"
+                                         "📍 *Кременчук*\n"
+                                         "⌚ *Учора, об 11:32*",
+                                 photo=preview,
+                                 reply_markup={
+                                     "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                                 parse_mode="Markdown")
+        )
         preview = open('img/pas.png', 'rb')
-        await bot.send_photo(chat_id=state.chat,
-                             caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
-                                     "📍 *Кременчук*\n"
-                                     "⌚ *25.10.23*",
-                             photo=preview,
-                             reply_markup={
-                                 "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
-                                                     [{"text": "Додати оголошення ➕", "callback_data": "375423t6"}]]},
-                             parse_mode="Markdown")
+        await cls.__context_manager.appent_delete_list(
+            await bot.send_photo(chat_id=state.chat,
+                                 caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
+                                         "📍 *Кременчук*\n"
+                                         "⌚ *25.10.23*",
+                                 photo=preview,
+                                 reply_markup={
+                                     "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
+                                                         [{"text": "Додати оголошення ➕", "callback_data": "375423t6"}]]},
+                                 parse_mode="Markdown")
+        )
 
 async def loc(message: Message, state: FSMContext) -> None:
     print(message.location)
