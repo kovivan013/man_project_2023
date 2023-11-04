@@ -3,11 +3,15 @@ import datetime
 import aiogram.types
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.types.input_media import InputMediaPhoto, InputFile
+
 from aiogram.dispatcher.storage import FSMContext
 from man_project_2023.telegram_bot.states.states import ProfileStates, CurrentState, State
 from man_project_2023.telegram_bot.utils.utils import HandlersUtils
 from aiogram.dispatcher.filters import Text
-from man_project_2023.telegram_bot.keyboards.keyboards import YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile
+from man_project_2023.telegram_bot.keyboards.keyboards import (
+    YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
+    InlineKeyboardMarkup
+)
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 
@@ -37,7 +41,8 @@ class ContextManager:
 
 
     async def select(self, current_state: CurrentState = None,
-                     delete_messages: bool = False):
+                     delete_messages: bool = False,
+                     reply_markup: InlineKeyboardMarkup = None):
         if current_state is not None:
             self.current_state = current_state
         if delete_messages:
@@ -51,11 +56,14 @@ class ContextManager:
             parse_mode="Markdown"
         ),
             reply_markup=DropdownMenu.menu_keyboard(
-                buttons=await self.current_state.get_buttons()
+                buttons=await self.current_state.get_buttons(reply_markup=reply_markup)
         ))
 
 
-    async def edit(self, image: str):
+    async def edit(self, text: str = None,
+                   image: str = None,
+                   reply_markup: InlineKeyboardMarkup = None,
+                   with_placeholder: bool = True):
         if self.is_used:
 
             if not await self.states_equals():
@@ -63,11 +71,13 @@ class ContextManager:
 
             media = await self.current_state.state_photo(image=image)
             await self.message.edit_media(media=InputMediaPhoto(
-                media=media
+                media=media,
+                caption=text,
+                parse_mode="Markdown"
             ),
                 reply_markup=DropdownMenu.placeholder_menu(
                     current_menu=await self.current_state.get_placeholder()
-                ))
+                ) if reply_markup is None else reply_markup)
         self.is_used = True
 
 
@@ -249,7 +259,20 @@ class MyProfileMH:
         current_state = CurrentState(state=state,
                                      keyboard_class=UpdateProfile,
                                      state_class=ProfileStates)
-        await cls.__context_manager.select(current_state=current_state)
+        await cls.__context_manager.select(current_state=current_state,
+                                           delete_messages=True,
+                                           reply_markup=UpdateProfile.keyboard())
+
+    @classmethod
+    async def edit_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        current_state = CurrentState(state=state,
+                                     keyboard_class=UpdateProfile,
+                                     state_class=ProfileStates)
+        await ProfileStates.username.set()
+        await cls.__context_manager.edit(text="⌨️ *Уведіть Ваш новий нікнейм:*",
+                                         image="dashboard_profile",
+                                         reply_markup=UpdateProfile.base_keyboard(),
+                                         with_placeholder=False)
 
 # class Test:
 #
@@ -315,4 +338,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         MyProfileMH.edit_menu, Text(equals=MyProfile.update_callback), state=ProfileStates.info_about
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.edit_username, Text(equals=UpdateProfile().username_callback), state=ProfileStates.info_about
     )

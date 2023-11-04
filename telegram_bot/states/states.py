@@ -1,7 +1,7 @@
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.types import Message
-from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
+from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu, InlineKeyboardMarkup
 
 class CurrentState:
 
@@ -38,7 +38,18 @@ class CurrentState:
     async def get_class(self):
         return self.keyboard_class()
 
-    async def get_buttons(self, mark_current: bool = True):
+    async def add_reply_markup(self, buttons_list: list,
+                               reply_markup: InlineKeyboardMarkup = None):
+
+        for i in reply_markup.inline_keyboard:
+            row_data: list = []
+            for j in i:
+                row_data.append(dict(j))
+            buttons_list.append(row_data)
+        return buttons_list
+
+    async def get_buttons(self, mark_current: bool = True,
+                          reply_markup: InlineKeyboardMarkup = None):
         keyboard = vars(await self.get_class())
 
         buttons_list: list = []
@@ -47,15 +58,19 @@ class CurrentState:
                 buttons_list.append([{"text": f"✅ {v}" if mark_current and await self.get_name() == i else v,
                                       "callback_data": keyboard[i + "_callback"]}])
 
-        return buttons_list
+        return await self.add_reply_markup(buttons_list=buttons_list,
+                                           reply_markup=reply_markup) if reply_markup is not None else buttons_list
+
 
     async def get_placeholder(self, required_state: State = None):
         buttons = vars(await self.get_class())
         state = await self.get_name()
         callback: str = "placeholder_callback"
 
-        return {"text": f"✅ {buttons[state] if required_state is None else buttons[required_state._state]} ▼",
-                "callback_data": callback}
+        placeholder: list = {"text": f"✅ {buttons[state] if required_state is None else buttons[required_state._state]} ▼",
+                            "callback_data": callback}
+
+        return placeholder
 
     async def state_photo(self, image: str):
         path: str = f"img/states_images/{image}.png"

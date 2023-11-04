@@ -28,11 +28,13 @@ class YesOrNo:
     no: str = f"❌ Ні"
     cancel: str = f"🛑 Відміна"
     skip: str = f"▶▶ Пропустити"
+    save: str = f"📁 Зберегти"
 
     yes_callback: str = f"yes_callback"
     no_callback: str = f"no_callback"
     cancel_callback: str = f"cancel_callback"
     skip_callback: str = f"skip_callback"
+    save_callback: str = f"save_callback"
 
     @classmethod
     def keyboard(cls, is_inline_keyboard: bool = False):
@@ -176,7 +178,7 @@ class DropdownMenu:
 
     @classmethod
     def menu_keyboard(cls, buttons: list) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard(row_width=1)
+        keyboard = default_inline_keyboard(row_width=2)
 
         # keyboard.add(
         #     InlineKeyboardButton(text=cls.menu_sign,
@@ -185,11 +187,11 @@ class DropdownMenu:
 
         for i in buttons:
             for data in i:
-                keyboard.add(
+                keyboard.insert(
                     InlineKeyboardButton(**data)
                 )
 
-        return keyboard
+        return {"inline_keyboard": buttons}
 
 # TODO: Нужно разделить на 2 класса потерявшего и нашедшего, буду смотреть по ситуации
 @dataclass(frozen=True)
@@ -254,7 +256,7 @@ class MyProfile:
         return keyboard
 
 
-class UpdateProfile:
+class UpdateProfile(Controls, YesOrNo):
 
     def __init__(self):
         self.username: str = f"✏️ Нікнейм"
@@ -263,13 +265,26 @@ class UpdateProfile:
         self.username_callback: str = f"username_callback"
         self.description_callback: str = f"description_callback"
 
-    # @classmethod
-    # def keyboard(cls) -> Union[InlineKeyboardMarkup]:
-    #     keyboard = default_inline_keyboard(row_width=1)
-    #
-    #     keyboard.add(
-    #         InlineKeyboardButton(text=cls.backward,
-    #                              callback_data=cls.backward_callback)
-    #     )
-    #
-    #     return keyboard
+    @classmethod
+    def keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.backward,
+                                 callback_data=cls.backward_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def base_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.backward,
+                                 callback_data=cls.backward_callback),
+            InlineKeyboardButton(text=cls.save,
+                                 callback_data=cls.save_callback)
+        )
+
+        return keyboard
