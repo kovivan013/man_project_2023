@@ -83,6 +83,7 @@ class CurrentState:
 class ProfileStates(StatesGroup):
     info_about = State()
     gigs = State()
+    edit_menu = State()
     username = State()
     description = State()
     select_menu = State()

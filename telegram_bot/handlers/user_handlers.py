@@ -60,10 +60,13 @@ class ContextManager:
         ))
 
 
-    async def edit(self, text: str = None,
+    async def edit(self, current_state: CurrentState = None,
+                   text: str = None,
                    image: str = None,
                    reply_markup: InlineKeyboardMarkup = None,
                    with_placeholder: bool = True):
+        if current_state is not None:
+            self.current_state = current_state
         if self.is_used:
 
             if not await self.states_equals():
@@ -191,7 +194,8 @@ class MyProfileMH:
                                      state_class=ProfileStates)
 
         await ProfileStates.info_about.set()
-        await cls.__context_manager.edit(image="dashboard_profile")
+        await cls.__context_manager.edit(current_state=current_state,
+                                         image="dashboard_profile")
         image = open('img/reg_data_board.png', 'rb')
 
         if not await cls.__context_manager.states_equals():
@@ -259,17 +263,29 @@ class MyProfileMH:
         current_state = CurrentState(state=state,
                                      keyboard_class=UpdateProfile,
                                      state_class=ProfileStates)
+        await ProfileStates.edit_menu.set()
         await cls.__context_manager.select(current_state=current_state,
                                            delete_messages=True,
                                            reply_markup=UpdateProfile.keyboard())
 
     @classmethod
-    async def edit_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
+    async def modify_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
         current_state = CurrentState(state=state,
                                      keyboard_class=UpdateProfile,
                                      state_class=ProfileStates)
         await ProfileStates.username.set()
         await cls.__context_manager.edit(text="⌨️ *Уведіть Ваш новий нікнейм:*",
+                                         image="dashboard_profile",
+                                         reply_markup=UpdateProfile.base_keyboard(),
+                                         with_placeholder=False)
+
+    @classmethod
+    async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        current_state = CurrentState(state=state,
+                                     keyboard_class=UpdateProfile,
+                                     state_class=ProfileStates)
+        await ProfileStates.description.set()
+        await cls.__context_manager.edit(text="⌨️ *Уведіть новий опис Вашого профіля:*",
                                          image="dashboard_profile",
                                          reply_markup=UpdateProfile.base_keyboard(),
                                          with_placeholder=False)
@@ -334,11 +350,23 @@ def register_user_handlers(dp: Dispatcher) -> None:
         MyProfileMH.info_about, Text(equals=MyProfile().info_about_callback), state=ProfileStates.select_menu
     )
     dp.register_callback_query_handler(
+        MyProfileMH.info_about, Text(equals=UpdateProfile.backward_callback), state=ProfileStates.edit_menu
+    )
+    dp.register_callback_query_handler(
         MyProfileMH.my_gigs, Text(equals=MyProfile().gigs_callback), state=ProfileStates.select_menu
     )
     dp.register_callback_query_handler(
         MyProfileMH.edit_menu, Text(equals=MyProfile.update_callback), state=ProfileStates.info_about
     )
     dp.register_callback_query_handler(
-        MyProfileMH.edit_username, Text(equals=UpdateProfile().username_callback), state=ProfileStates.info_about
+        MyProfileMH.edit_menu, Text(equals=UpdateProfile.backward_callback), state=ProfileStates.username
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.edit_menu, Text(equals=UpdateProfile.backward_callback), state=ProfileStates.description
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.modify_username, Text(equals=UpdateProfile().username_callback), state=ProfileStates.edit_menu
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.modify_description, Text(equals=UpdateProfile().description_callback), state=ProfileStates.edit_menu
     )
