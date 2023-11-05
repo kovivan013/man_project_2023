@@ -20,8 +20,16 @@ def create_user(user: UserCreate, response: Response, db: Session = Depends(get_
         raise exceptions.ItemExistsException
 
     response.status_code = status.HTTP_201_CREATED
+
+    data: dict = {
+          "telegram_id": user.telegram_id,
+          "username": "string",
+          "userinfo": {},
+          "mode": 0
+        }
+
     return PostRequest(db=db,
-                       data=user).send_request()
+                       data=data).send_request()
 
 @user_router.get("/{telegram_id}/mode")
 def get_user_mode(telegram_id: int, db: Session = Depends(get_db)):

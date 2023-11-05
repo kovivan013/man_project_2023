@@ -4,7 +4,9 @@ from pydantic import BaseModel
 class UserCreate(BaseModel):
     telegram_id: int
     username: str
-    userinfo: dict = {}
+    created_at: int
+    nickname: str
+    description: str
     mode: int = 0
 
     def as_dict(self) -> dict:
@@ -411,3 +413,4 @@ class GigCreate(BaseModel):
 #         }
 #     ]
 # }
+

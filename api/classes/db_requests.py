@@ -2,14 +2,17 @@ from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
 
 from man_project_2023.api.models.models import User
+from man_project_2023.api.handlers.user_handlers import Response
 
 class RequestSender(ABC):
 
     def _as_dict(self, data) -> dict:
         return dict(data)
 
-    def __init__(self, db: Session, data: dict = None):
+    def __init__(self, db: Session, response: Response,
+                 data: dict = None):
         self.db = db
+        self.response = response
         self._payload = self._as_dict(data)
 
     @abstractmethod
