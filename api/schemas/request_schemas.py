@@ -1,16 +1,19 @@
 from pydantic import BaseModel
 
-
-class UserCreate(BaseModel):
+class BaseUser(BaseModel):
     telegram_id: int
     username: str
-    created_at: int
-    nickname: str
+
+class UserCreate(BaseUser):
     description: str
-    mode: int = 0
 
     def as_dict(self) -> dict:
         return self.__dict__
+
+class UpdateUser(BaseUser):
+    username: str = ""
+    description: str = ""
+
 
 class GigCreate(BaseModel):
     # id: int

@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Depends, Response
+import datetime
+
+from fastapi import APIRouter, Depends, Response, Request
 from starlette import status
 from sqlalchemy.orm import Session
 
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.api.schemas.request_schemas import UserCreate
+from man_project_2023.api.schemas.request_schemas import UserCreate, UpdateUser
+from man_project_2023.api.schemas.data_schemas import DataStructure
 from man_project_2023.api.utils import exceptions
 from man_project_2023.api.utils.utils import as_dict
 
@@ -13,23 +16,46 @@ user_router = APIRouter()
 
 
 @user_router.post("/create_user")
-def create_user(user: UserCreate, response: Response, db: Session = Depends(get_db)):
-
+def create_user(user: UserCreate, response: Response, request: Request, db: Session = Depends(get_db)):
+    result = DataStructure()
     user_exists = db.query(User).filter(User.telegram_id == user.telegram_id).first() is not None
     if user_exists:
         raise exceptions.ItemExistsException
 
-    response.status_code = status.HTTP_201_CREATED
-
     data: dict = {
           "telegram_id": user.telegram_id,
-          "username": "string",
-          "userinfo": {},
-          "mode": 0
+          "username": user.username,
+          "userinfo": {
+              "description": user.description,
+              "badges": []
+          }
         }
 
+    result.status = status.HTTP_201_CREATED
+    result.success = True
+    result.message = "test"
+
     return PostRequest(db=db,
-                       data=data).send_request()
+                       response=response,
+                       data=data,
+                       result=result).send_request()
+
+@user_router.patch("/update_description")
+def update_description(data: UpdateUser, response: Response, db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == data.telegram_id).first()
+    if user is None:
+        raise exceptions.ItemNotFoundException
+
+    user_data: dict = dict(user.userinfo)
+
+    user_data["description"] = data.description
+    user.userinfo = user_data
+    db.commit()
+
+    result.success = True
+    return result
+
 
 @user_router.get("/{telegram_id}/mode")
 def get_user_mode(telegram_id: int, db: Session = Depends(get_db)):
