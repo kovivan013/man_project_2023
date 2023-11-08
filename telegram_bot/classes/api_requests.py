@@ -52,6 +52,3 @@ class AdminAPI(API):
 
 class SystemAPI(API):
     __prefix = lambda endpoint: "/system" + endpoint
-
-import asyncio
-print(asyncio.run(UserAPI.get_user_data(telegram_id=1055676461)))
