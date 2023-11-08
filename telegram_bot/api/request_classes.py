@@ -1,6 +1,8 @@
 import aiohttp
 from abc import ABC, abstractmethod
 
+from man_project_2023.telegram_bot.api.utils_schemas import DataStructure, ResponseStructure
+
 
 class RequestSender(ABC):
 
@@ -12,7 +14,7 @@ class RequestSender(ABC):
     async def _send(self):
         pass
 
-    async def send_request(self):
+    async def send_request(self) -> DataStructure:
 
         self._payload: dict = {
             "url": self.url
@@ -25,20 +27,29 @@ class RequestSender(ABC):
 
         try:
             async with aiohttp.ClientSession(**session_params) as session:
-                answer: dict = await self._send(session)
+                answer: ResponseStructure = await self._send(session)
         except Exception as err:
             raise Exception(err)
 
-        return answer["answer_data"]
-
+        # validate answer data
+        result = DataStructure(**answer.data)
+        if result.success:
+            return result
+        elif answer.status not in range(200, 300):
+            error_text: str = (
+                f"Status: {answer.status}\n"
+                f"Url: {self.url}\n"
+                f"Error data: {answer.data}"
+            )
+            return error_text
 
 class GetRequest(RequestSender):
     async def _send(self, session) -> dict:
         async with session.get(**self._payload) as response:
-            return {
-                "status": response.status,
-                "answer_data": await response.json()
-            }
+            return ResponseStructure(
+                status=response.status,
+                data=await response.json()
+            )
 
 
 class PostRequest(RequestSender):
@@ -49,7 +60,7 @@ class PostRequest(RequestSender):
     async def _send(self, session):
         self._payload.update(json=self._data_for_send)
         async with session.post(**self._payload) as response:
-            return {
-                "status": response.status,
-                "answer_data": await response.json()
-            }
+            return ResponseStructure(
+                status=response.status,
+                data=await response.json()
+            )

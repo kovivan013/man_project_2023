@@ -199,11 +199,13 @@ class MyProfileMH:
         image = open('img/reg_data_board.png', 'rb')
 
         if not await cls.__context_manager.states_equals():
+            user_data = await UserAPI.get_user_data(telegram_id=state.user)
+            print(user_data)
             await cls.__context_manager.appent_delete_list(
                 await bot.send_photo(chat_id=state.chat,
                                      caption="📃 *Опис*"
                                              "\n\n"
-                                             "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed ornare massa sapien, a feugiat nisi dignissim in. Integer non est dignissim, vehicula odio eget."
+                                             f"{user_data.data['description']}"
                                              "\n\n"
                                              "⭐ *Досягнення*"
                                              "\n\n"
@@ -334,9 +336,9 @@ class UserProfileMH:
     pass
 
 def register_user_handlers(dp: Dispatcher) -> None:
-    dp.register_message_handler(
-        StartMH.cls_menu, commands=["start"], state=None
-    )
+    # dp.register_message_handler(
+    #     StartMH.cls_menu, commands=["start"], state=None
+    # )
     dp.register_message_handler(
         MyProfileMH.context_manager, commands=["profile"], state=None
     )

@@ -1,7 +1,7 @@
 import asyncio
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
-from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest
+from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, DataStructure
 
 
 class API:
@@ -27,11 +27,18 @@ class UserAPI(API):
         endpoint: str = cls.__prefix("/create_user")
         data: dict = {
             "telegram_id": telegram_id,
-            "username": username
+            "username": username,
+            "description": ""
         }
 
         return await cls._post_request(endpoint=endpoint,
                                        data=data)
+
+    @classmethod
+    async def get_user_data(cls, telegram_id: int) -> DataStructure:
+        endpoint: str = cls.__prefix(f"/{telegram_id}/user_data")
+        return await cls._get_request(endpoint=endpoint)
+
 
     @classmethod
     async def get_user_mode(cls, telegram_id: int):
@@ -45,3 +52,6 @@ class AdminAPI(API):
 
 class SystemAPI(API):
     __prefix = lambda endpoint: "/system" + endpoint
+
+import asyncio
+print(asyncio.run(UserAPI.get_user_data(telegram_id=1055676461)))

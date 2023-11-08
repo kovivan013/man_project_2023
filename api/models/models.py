@@ -7,7 +7,7 @@ class User(BaseModel):
     __tablename__ = "users"
     telegram_id = Column(BigInteger, primary_key=True, index=True)
     username = Column(String, default="")
-    userinfo = Column(JSON, default={})
+    user_data = Column(JSON, default={})
     mode = Column(SmallInteger, default=0)
     created_at = Column(BigInteger, default=0)
     updated_at = Column(BigInteger, default=0)

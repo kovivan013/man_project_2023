@@ -2,9 +2,9 @@ from pydantic import BaseModel
 
 class BaseUser(BaseModel):
     telegram_id: int
-    username: str
 
 class UserCreate(BaseUser):
+    username: str
     description: str
 
     def as_dict(self) -> dict:

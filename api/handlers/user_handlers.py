@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.api.schemas.request_schemas import UserCreate, UpdateUser
+from man_project_2023.api.schemas.request_schemas import UserCreate, UpdateUser, BaseUser
 from man_project_2023.api.schemas.data_schemas import DataStructure
 from man_project_2023.api.utils import exceptions
 from man_project_2023.api.utils.utils import as_dict
@@ -25,7 +25,7 @@ def create_user(user: UserCreate, response: Response, request: Request, db: Sess
     data: dict = {
           "telegram_id": user.telegram_id,
           "username": user.username,
-          "userinfo": {
+          "user_data": {
               "description": user.description,
               "badges": []
           }
@@ -40,6 +40,20 @@ def create_user(user: UserCreate, response: Response, request: Request, db: Sess
                        data=data,
                        result=result).send_request()
 
+
+@user_router.get("/{telegram_id}/user_data")
+def user_data(telegram_id: int, db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+    if user is None:
+        raise exceptions.ItemNotFoundException
+
+    result.success = True
+    result.data = user.user_data
+
+    return result
+
+
 @user_router.patch("/update_description")
 def update_description(data: UpdateUser, response: Response, db: Session = Depends(get_db)):
     result = DataStructure()
@@ -47,10 +61,10 @@ def update_description(data: UpdateUser, response: Response, db: Session = Depen
     if user is None:
         raise exceptions.ItemNotFoundException
 
-    user_data: dict = dict(user.userinfo)
+    user_data: dict = dict(user.user_data)
 
     user_data["description"] = data.description
-    user.userinfo = user_data
+    user.user_data = user_data
     db.commit()
 
     result.success = True
@@ -58,7 +72,7 @@ def update_description(data: UpdateUser, response: Response, db: Session = Depen
 
 
 @user_router.get("/{telegram_id}/mode")
-def get_user_mode(telegram_id: int, db: Session = Depends(get_db)):
+def user_mode(telegram_id: int, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
     if user is None:

@@ -8,3 +8,11 @@ class DataStructure(BaseModel):
 
     def _as_dict(self) -> dict:
         return self.__dict__
+
+class ResponseStructure:
+    def __init__(self, status: int, data: dict):
+        self.status = status
+        self.data = data
+
+    def _as_dict(self) -> dict:
+        return self.__dict__
