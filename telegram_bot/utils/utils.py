@@ -32,47 +32,6 @@ from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
 from aiogram.types import Message, InputMediaPhoto, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext
 
-class Utils:
-    pass
-
-
-
-class HandlersUtils:
-    # TODO: context manager, etc...
-
-    @classmethod
-    async def context_manager(cls, current_state: CurrentState,
-                              message: Message, image: str) -> Message:
-
-        photo = await current_state.state_photo(image=image)
-        async with current_state.state.proxy() as data:
-            data.update(
-                {"context_manager": await message.answer_photo(photo=photo,
-                                                               reply_markup=DropdownMenu.placeholder_menu(
-                                                                   current_menu=await current_state.get_placeholder(required_state=ProfileStates.gigs)
-                                                               ))}
-            )
-
-    @classmethod
-    async def edit_context_manager(cls, current_state: CurrentState,
-                                   message: Message):
-        file_id = message.photo[0]["file_id"]
-        await message.edit_media(media=InputMediaPhoto(
-                media=file_id
-            ),
-            reply_markup=DropdownMenu.placeholder_menu(
-                current_menu=await current_state.get_placeholder()
-        ))
-
-
-
-class KeyboardsUtils:
-    pass
-
-class StatesUtils:
-    pass
-
-
 # class StateUtils:
 #
 #     @classmethod
@@ -106,3 +65,19 @@ class StatesUtils:
 #
 #
 # print(MyProfile().get_buttons())
+
+# class Structure:
+#     def __init__(self, telegram_id: int = None,
+#                  username: str = None) -> None:
+#         if telegram_id is not None: self.telegram_id = telegram_id
+#         if username is not None: self.username = username
+#
+#     def _as_dict(self) -> dict:
+#         return self.__dict__
+#
+#
+# s = Structure(telegram_id=565468)
+# print(s._as_dict())
+
+
+

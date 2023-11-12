@@ -166,10 +166,12 @@ class DropdownMenu:
 
     @classmethod
     def placeholder_menu(cls, current_menu: dict):
-        keyboard = default_inline_keyboard(row_width=1)
+        keyboard = default_inline_keyboard(row_width=2)
 
         keyboard.add(
-            InlineKeyboardButton(text=f"Режим Детектива 🔦",
+            InlineKeyboardButton(text=f"↩ На головну",
+                                 callback_data="change_mode"),
+            InlineKeyboardButton(text=f"Режим 🔦",
                                  callback_data="change_mode"),
             InlineKeyboardButton(**current_menu)
         )

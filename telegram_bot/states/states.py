@@ -5,8 +5,15 @@ from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu, Inli
 
 class CurrentState:
 
-    def __init__(self, state: FSMContext, keyboard_class = None, state_class = None):
+    def __init__(self, state: FSMContext = None, keyboard_class = None, state_class = None):
         self.state = state
+        self.keyboard_class = keyboard_class
+        self.state_class = state_class
+
+    async def set_state(self, state: FSMContext):
+        self.state = state
+
+    async def update_classes(self, keyboard_class, state_class):
         self.keyboard_class = keyboard_class
         self.state_class = state_class
 
@@ -83,10 +90,16 @@ class CurrentState:
 class ProfileStates(StatesGroup):
     info_about = State()
     gigs = State()
+    select_menu = State()
     edit_menu = State()
+
+class UpdateDescriptionStates(StatesGroup):
     username = State()
     description = State()
-    select_menu = State()
+    input_username = State()
+    input_description = State()
+    confirm_username = State()
+    confirm_description = State()
 
     # @classmethod
     # async def state_image(cls, path: str = "img/states_images/",

@@ -1,7 +1,7 @@
 import asyncio
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
-from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, DataStructure
+from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DataStructure
 
 
 class API:
@@ -17,6 +17,12 @@ class API:
         url: str = cls.__BASE_SERVER_URL + endpoint
         return await PostRequest(url=url,
                                  data=data).send_request()
+
+    @classmethod
+    async def _patch_request(cls, endpoint: str, data: dict):
+        url: str = cls.__BASE_SERVER_URL + endpoint
+        return await PatchRequest(url=url,
+                                  data=data).send_request()
 
 
 class UserAPI(API):
@@ -39,6 +45,17 @@ class UserAPI(API):
         endpoint: str = cls.__prefix(f"/{telegram_id}/user_data")
         return await cls._get_request(endpoint=endpoint)
 
+    @classmethod
+    async def update_description(cls, telegram_id: int, description: str):
+        endpoint: str = cls.__prefix("/update_description/")
+
+        data: dict = {
+            "telegram_id": telegram_id,
+            "description": description
+        }
+
+        return await cls._patch_request(endpoint=endpoint,
+                                        data=data)
 
     @classmethod
     async def get_user_mode(cls, telegram_id: int):
