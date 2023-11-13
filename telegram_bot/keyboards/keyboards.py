@@ -279,14 +279,17 @@ class UpdateProfile(Controls, YesOrNo):
         return keyboard
 
     @classmethod
-    def base_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+    def base_keyboard(cls, with_save: bool = True) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard()
 
         keyboard.add(
             InlineKeyboardButton(text=cls.backward,
-                                 callback_data=cls.backward_callback),
-            InlineKeyboardButton(text=cls.save,
-                                 callback_data=cls.save_callback)
+                                 callback_data=cls.backward_callback)
         )
+        if with_save:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.save,
+                                     callback_data=cls.save_callback)
+            )
 
         return keyboard

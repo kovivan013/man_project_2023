@@ -99,6 +99,7 @@ class UpdateDescriptionStates(StatesGroup):
     input_username = State()
     input_description = State()
     confirm_username = State()
+    backward_description = State()
     confirm_description = State()
 
     # @classmethod

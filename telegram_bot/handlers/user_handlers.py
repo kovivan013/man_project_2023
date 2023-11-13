@@ -39,12 +39,13 @@ class BranchManager:
 
     async def state_data(self) -> 'StateStructure':
         state_name = await self.current_state.get_name()
-        return self.data[state_name]
+        state_data = self.data[state_name]
+        return state_data
 
-    async def set_data(self, state_name: str,
+    async def set_data(self, state_name: State,
                        caption: str, photo):
-        self.data.update({state_name: StateStructure(caption=caption,
-                                                     media=photo)})
+        self.data.update({state_name._state: StateStructure(caption=caption,
+                                                            media=photo)})
 
     async def set(self, current_state: CurrentState, message: Message):
         self.current_state = current_state
@@ -62,7 +63,8 @@ class BranchManager:
         data = await self.state_data()
         await self.message.edit_media(media=InputMediaPhoto(
             media=data.media,
-            caption=data.caption
+            caption=data.caption,
+            parse_mode="Markdown"
         ),
         reply_markup=YesOrNo.keyboard(is_inline_keyboard=True))
 
@@ -129,16 +131,18 @@ class ContextManager:
             if not await self.states_equals():
                 await self.delete_context_messages()
 
-            media = await self.current_state.state_photo(image=image)
-            edited_message = await self.message.edit_media(media=InputMediaPhoto(
-                media=media,
-                caption=text,
-                parse_mode="Markdown"
-            ),
-                reply_markup=DropdownMenu.placeholder_menu(
-                    current_menu=await self.current_state.get_placeholder()
-                ) if reply_markup is None else reply_markup)
-            return edited_message
+            try:
+                media = await self.current_state.state_photo(image=image)
+                edited_message = await self.message.edit_media(media=InputMediaPhoto(
+                    media=media,
+                    caption=text,
+                    parse_mode="Markdown"
+                ),
+                    reply_markup=DropdownMenu.placeholder_menu(
+                        current_menu=await self.current_state.get_placeholder()
+                    ) if reply_markup is None else reply_markup)
+                return edited_message
+            except: return None
         self.is_used = True
 
 
@@ -365,45 +369,46 @@ class MyProfileMH:
 
 class UpdateDescriptionMH:
 
-    current_state: CurrentState = CurrentState(keyboard_class=UpdateProfile,
-                                               state_class=UpdateDescriptionStates)
+    currentState: CurrentState = CurrentState(keyboard_class=UpdateProfile,
+                                              state_class=UpdateDescriptionStates)
     branchManager: BranchManager = BranchManager()
 
     @classmethod
-    async def modify_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await UpdateDescriptionStates.username.set()
-        await contextManager.edit(text="⌨️ *Уведіть Ваш новий нікнейм:*",
-                                    image="dashboard_profile",
-                                    reply_markup=UpdateProfile.base_keyboard(),
-                                    with_placeholder=False)
-
-    @classmethod
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await cls.current_state.set_state(state)
+        await cls.currentState.set_state(state)
         await UpdateDescriptionStates.description.set()
         message = await contextManager.edit(text="⌨️ *Уведіть новий опис Вашого профіля:*",
                                             image="dashboard_profile",
-                                            reply_markup=UpdateProfile.base_keyboard(),
+                                            reply_markup=UpdateProfile.base_keyboard(with_save=False),
                                             with_placeholder=False)
-        await cls.branchManager.set(current_state=cls.current_state,
+
+        await cls.branchManager.set(current_state=cls.currentState,
                                     message=message)
-        photo = await cls.current_state.state_photo(image="dashboard_profile")
-        await cls.branchManager.set_data(state_name=UpdateDescriptionStates.confirm_description._state,
-                                         caption="Ви точно хочете змінити?",
+        photo = await cls.currentState.state_photo(image="dashboard_profile")
+        await cls.branchManager.set_data(state_name=UpdateDescriptionStates.backward_description,
+                                         caption="*Ви точно хочете закінчити редагування?*",
                                          photo=photo)
 
     @classmethod
     async def check_description(cls, message: Message, state: FSMContext) -> None:
         await UpdateDescriptionStates.input_description.set()
+        await contextManager.edit(text="👆 Натисніть *\"Зберегти\"* або уведіть *новий опис*:",
+                                  image="dashboard_profile",
+                                  reply_markup=UpdateProfile.base_keyboard(),
+                                  with_placeholder=False)
+
         async with state.proxy() as data:
             data["description"] = message.text
         await message.delete()
 
-    # TODO: сделать общую функцию save_data() когда будет сделан класс YesOrNo для подвязки всей информации
+    @classmethod
+    async def confirm_backward(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await UpdateDescriptionStates.backward_description.set()
+        await cls.branchManager.edit()
+
     @classmethod
     async def save_data(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await UpdateDescriptionStates.confirm_description.set()
-        await cls.branchManager.edit()
         async with state.proxy() as data:
             description = data["description"]
         await UserAPI.update_description(telegram_id=state.user,
@@ -415,12 +420,20 @@ class UpdateDescriptionMH:
 
     @classmethod
     async def res(cls, callback: CallbackQuery, state: FSMContext) -> None:
+
         await cls.branchManager.reset_message()
 
 
 
 class UpdateUsername:
-    pass
+
+    @classmethod
+    async def modify_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await UpdateDescriptionStates.username.set()
+        await contextManager.edit(text="⌨️ *Уведіть Ваш новий нікнейм:*",
+                                  image="dashboard_profile",
+                                  reply_markup=UpdateProfile.base_keyboard(),
+                                  with_placeholder=False)
 
 
 
@@ -457,13 +470,19 @@ def register_user_handlers(dp: Dispatcher) -> None:
         MyProfileMH.edit_menu, Text(equals=UpdateProfile.backward_callback), state=UpdateDescriptionStates.description
     )
     dp.register_callback_query_handler(
-        UpdateDescriptionMH.modify_username, Text(equals=UpdateProfile().username_callback), state=ProfileStates.edit_menu
-    )
-    dp.register_callback_query_handler(
         UpdateDescriptionMH.modify_description, Text(equals=UpdateProfile().description_callback), state=ProfileStates.edit_menu
     )
     dp.register_message_handler(
+        UpdateDescriptionMH.check_description, state=UpdateDescriptionStates.input_description
+    )
+    dp.register_message_handler(
         UpdateDescriptionMH.check_description, state=UpdateDescriptionStates.description
+    )
+    dp.register_callback_query_handler(
+        UpdateDescriptionMH.check_description, Text(YesOrNo.no_callback), state=UpdateDescriptionStates.backward_description
+    )
+    dp.register_callback_query_handler(
+        UpdateDescriptionMH.confirm_backward, Text(equals=Controls.backward_callback), state=UpdateDescriptionStates.input_description
     )
     dp.register_callback_query_handler(
         UpdateDescriptionMH.save_data, Text(equals=UpdateProfile.save_callback), state=UpdateDescriptionStates.input_description
