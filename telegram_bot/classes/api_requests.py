@@ -47,7 +47,7 @@ class UserAPI(API):
 
     @classmethod
     async def update_description(cls, telegram_id: int, description: str):
-        endpoint: str = cls.__prefix("/update_description/")
+        endpoint: str = cls.__prefix("/update_description")
 
         data: dict = {
             "telegram_id": telegram_id,

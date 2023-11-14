@@ -1,5 +1,19 @@
 from pydantic import BaseModel
 
+class PayloadStructure:
+    def add(self,
+             telegram_id: int = None,
+             username: str = None,
+             description: str = None):
+        data: dict = locals()
+        data.pop("self")
+        for i, v in data.items():
+            if v is not None:
+                setattr(self, i, v)
+
+    def as_dict(self) -> dict:
+        return self.__dict__
+
 class DataStructure(BaseModel):
     status: int = 200
     success: bool = False
@@ -16,3 +30,4 @@ class ResponseStructure:
 
     def _as_dict(self) -> dict:
         return self.__dict__
+

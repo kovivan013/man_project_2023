@@ -79,5 +79,29 @@ from aiogram.dispatcher.storage import FSMContext
 # s = Structure(telegram_id=565468)
 # print(s._as_dict())
 
+# class A:
+#
+#     def add_data(self,
+#                  telegram_id: int = None,
+#                  username: str = None,
+#                  description: str = None,
+#                  mode: int = None,
+#                 ):
+#         data: dict = locals()
+#         data.pop("self")
+#         for i, v in data.items():
+#             if v is not None:
+#                 setattr(self, i, v)
+#
+#     def as_dict(self) -> dict:
+#         return self.__dict__
+#
+# a = A()
+# a.add_data(telegram_id=347545, username="sdfhgbtg")
+# print(a.as_dict())
+# a.add_data(username="dshrfgbdyhtgb")
+# print(a.as_dict())
+# a.add_data(telegram_id=345764356435)
+# print(a.as_dict())
 
 

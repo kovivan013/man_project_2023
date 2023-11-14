@@ -3,8 +3,10 @@ import datetime
 import aiogram.types
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from aiogram.types.input_media import InputMediaPhoto, InputFile
+from aiogram.types.message import ContentTypes
 
 from aiogram.dispatcher.storage import FSMContext
+from man_project_2023.telegram_bot.api.utils_schemas import PayloadStructure
 from man_project_2023.telegram_bot.states.states import ProfileStates, UpdateDescriptionStates, CurrentState, State
 from aiogram.dispatcher.filters import Text
 from man_project_2023.telegram_bot.keyboards.keyboards import (
@@ -30,25 +32,19 @@ class BranchManager:
         self.message: Message = None
         self.data: dict = {}
 
-    # нужно сделать функцию для заполнения функции и чтобы она пейлоадилась в дикт (к примеру текст после нажатия по кнопке с коллбэком и тп)
-    # data1: dict = {
-    #     "callback1": {
-    #
-    #     }
-    # }
-
     async def state_data(self) -> 'StateStructure':
         state_name = await self.current_state.get_name()
         state_data = self.data[state_name]
         return state_data
 
     async def set_data(self, state_name: State,
-                       caption: str, photo):
+                       caption: str, image_name: str):
         self.data.update({state_name._state: StateStructure(caption=caption,
-                                                            media=photo)})
+                                                            media=image_name)})
 
     async def set(self, current_state: CurrentState, message: Message):
         self.current_state = current_state
+
         self.default_message = {
             "media": {
                 "media": message.photo[0].file_id,
@@ -62,7 +58,7 @@ class BranchManager:
     async def edit(self):
         data = await self.state_data()
         await self.message.edit_media(media=InputMediaPhoto(
-            media=data.media,
+            media=await self.current_state.state_photo(data.media),
             caption=data.caption,
             parse_mode="Markdown"
         ),
@@ -73,8 +69,6 @@ class BranchManager:
             **self.default_message["media"]
         ),
         reply_markup=self.default_message["reply_markup"])
-
-
 
 
 class ContextManager:
@@ -372,11 +366,13 @@ class UpdateDescriptionMH:
     currentState: CurrentState = CurrentState(keyboard_class=UpdateProfile,
                                               state_class=UpdateDescriptionStates)
     branchManager: BranchManager = BranchManager()
+    data_for_send = None
 
     @classmethod
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await cls.currentState.set_state(state)
         await UpdateDescriptionStates.description.set()
+        cls.data_for_send = PayloadStructure()
         message = await contextManager.edit(text="⌨️ *Уведіть новий опис Вашого профіля:*",
                                             image="dashboard_profile",
                                             reply_markup=UpdateProfile.base_keyboard(with_save=False),
@@ -384,10 +380,10 @@ class UpdateDescriptionMH:
 
         await cls.branchManager.set(current_state=cls.currentState,
                                     message=message)
-        photo = await cls.currentState.state_photo(image="dashboard_profile")
+
         await cls.branchManager.set_data(state_name=UpdateDescriptionStates.backward_description,
                                          caption="*Ви точно хочете закінчити редагування?*",
-                                         photo=photo)
+                                         image_name="dashboard_profile")
 
     @classmethod
     async def check_description(cls, message: Message, state: FSMContext) -> None:
@@ -396,9 +392,13 @@ class UpdateDescriptionMH:
                                   image="dashboard_profile",
                                   reply_markup=UpdateProfile.base_keyboard(),
                                   with_placeholder=False)
+        if "data" not in message:
+            await cls.update_data(message=message,
+                                  state=state)
 
-        async with state.proxy() as data:
-            data["description"] = message.text
+    @classmethod
+    async def update_data(cls, message: Message, state: FSMContext) -> None:
+        cls.data_for_send.add(description=message.text)
         await message.delete()
 
     @classmethod
@@ -409,31 +409,17 @@ class UpdateDescriptionMH:
     @classmethod
     async def save_data(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await UpdateDescriptionStates.confirm_description.set()
-        async with state.proxy() as data:
-            description = data["description"]
-        await UserAPI.update_description(telegram_id=state.user,
-                                         description=description)
-        # await ProfileStates.edit_menu.set()
-        # await cls.context_menu_cls.select(current_state=cls.current_state,
-        #                                   delete_messages=True,
-        #                                   reply_markup=UpdateProfile.keyboard())
+        cls.data_for_send.add(telegram_id=state.user)
+        await UserAPI.update_description(**cls.data_for_send.as_dict())
+        await MyProfileMH.edit_menu(callback=callback,
+                                    state=state)
 
-    @classmethod
-    async def res(cls, callback: CallbackQuery, state: FSMContext) -> None:
-
-        await cls.branchManager.reset_message()
-
-
-
-class UpdateUsername:
+class UpdateUsernameMH:
 
     @classmethod
     async def modify_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await UpdateDescriptionStates.username.set()
-        await contextManager.edit(text="⌨️ *Уведіть Ваш новий нікнейм:*",
-                                  image="dashboard_profile",
-                                  reply_markup=UpdateProfile.base_keyboard(),
-                                  with_placeholder=False)
+        await callback.answer(text="Недоступно",
+                              show_alert=True)
 
 
 
@@ -470,23 +456,26 @@ def register_user_handlers(dp: Dispatcher) -> None:
         MyProfileMH.edit_menu, Text(equals=UpdateProfile.backward_callback), state=UpdateDescriptionStates.description
     )
     dp.register_callback_query_handler(
+        MyProfileMH.edit_menu, Text(equals=UpdateProfile.yes_callback), state=UpdateDescriptionStates.backward_description
+    )
+    dp.register_callback_query_handler(
         UpdateDescriptionMH.modify_description, Text(equals=UpdateProfile().description_callback), state=ProfileStates.edit_menu
     )
+    dp.register_callback_query_handler(
+        UpdateUsernameMH.modify_username, Text(equals=UpdateProfile().username_callback), state=ProfileStates.edit_menu
+    )
+    dp.register_callback_query_handler(
+        UpdateDescriptionMH.confirm_backward, Text(equals=Controls.backward_callback), state=UpdateDescriptionStates.input_description
+    )
     dp.register_message_handler(
-        UpdateDescriptionMH.check_description, state=UpdateDescriptionStates.input_description
+        UpdateDescriptionMH.update_data, state=UpdateDescriptionStates.input_description
     )
     dp.register_message_handler(
         UpdateDescriptionMH.check_description, state=UpdateDescriptionStates.description
     )
     dp.register_callback_query_handler(
-        UpdateDescriptionMH.check_description, Text(YesOrNo.no_callback), state=UpdateDescriptionStates.backward_description
-    )
-    dp.register_callback_query_handler(
-        UpdateDescriptionMH.confirm_backward, Text(equals=Controls.backward_callback), state=UpdateDescriptionStates.input_description
+        UpdateDescriptionMH.check_description, Text(equals=YesOrNo.no_callback), state=UpdateDescriptionStates.backward_description
     )
     dp.register_callback_query_handler(
         UpdateDescriptionMH.save_data, Text(equals=UpdateProfile.save_callback), state=UpdateDescriptionStates.input_description
-    )
-    dp.register_callback_query_handler(
-        UpdateDescriptionMH.res, Text(equals=UpdateProfile.no_callback), state=UpdateDescriptionStates.confirm_description
     )
