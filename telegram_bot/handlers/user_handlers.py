@@ -244,7 +244,7 @@ class MyProfileMH:
                                                state_class=MyProfile)
         await ProfileStates.info_about.set()
         await contextManager.edit(current_state=cls.current_state,
-                                        image="dashboard_profile")
+                                  image="dashboard_profile")
         image = open('img/reg_data_board.png', 'rb')
 
         if not await contextManager.states_equals():
