@@ -28,6 +28,18 @@ def create_user(user: UserCreate, response: Response, request: Request, db: Sess
           "user_data": {
               "description": user.description,
               "badges": []
+          },
+          "gigs": {
+              0: {
+                  "active": {},
+                  "completed": {},
+                  "archived": {}
+              },
+              1: {
+                  "active": {},
+                  "completed": {},
+                  "archived": {}
+              }
           }
         }
 
@@ -50,6 +62,18 @@ def user_data(telegram_id: int, db: Session = Depends(get_db)):
 
     result.success = True
     result.data = user.user_data
+
+    return result
+
+@user_router.get("/{telegram_id}/gigs")
+def user_gigs(telegram_id: int, db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+    if user is None:
+        raise exceptions.ItemNotFoundException
+
+    result.success = True
+    result.data = user.gigs
 
     return result
 

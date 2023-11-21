@@ -94,13 +94,24 @@ class ProfileStates(StatesGroup):
     edit_menu = State()
 
 class UpdateDescriptionStates(StatesGroup):
-    username = State()
     description = State()
-    input_username = State()
     input_description = State()
-    confirm_username = State()
     backward_description = State()
     confirm_description = State()
+
+class UpdateUsernameStates(StatesGroup):
+    username = State()
+    check_username = State()
+    confirm_username = State()
+    backward_username = State()
+
+class CreateGigStates(StatesGroup):
+    name = State()
+    description = State()
+    photo = State()
+    location = State()
+    date = State()
+    backward = State()
 
     # @classmethod
     # async def state_image(cls, path: str = "img/states_images/",

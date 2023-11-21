@@ -2,9 +2,14 @@ from pydantic import BaseModel
 
 class PayloadStructure:
     def add(self,
-             telegram_id: int = None,
-             username: str = None,
-             description: str = None):
+            telegram_id: int = None,
+            username: str = None,
+            name: str = None,
+            description: str = None,
+            tags: list = None,
+            location: dict = None,
+            date: int = None
+            ):
         data: dict = locals()
         data.pop("self")
         for i, v in data.items():

@@ -16,17 +16,14 @@ class UpdateUser(BaseUser):
 
 
 class GigCreate(BaseModel):
-    # id: int
-    # status: int
-    # name: str
-    # description: str
-    # # image = None
-    # location: dict
-    # date: int
-
-    # id: int
-    # status: int
-    # tags: list
+    id: int
+    status: int # 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
+    name: str
+    description: str
+    tags: list
+    # image = None
+    location: dict # {"latitude": 0, "longitude": 0}
+    date: int # in unix timestamp  1700356582
 
     def as_dict(self) -> dict:
         return self.__dict__

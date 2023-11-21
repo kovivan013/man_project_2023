@@ -293,3 +293,29 @@ class UpdateProfile(Controls, YesOrNo):
             )
 
         return keyboard
+
+class CreateGigMenu(YesOrNo):
+
+    next: str = "Далі ↪️"
+    next_callback: str = "next_callback"
+
+    @classmethod
+    def keyboard(cls, with_next: bool = False, with_skip: bool = False):
+        keyboard = default_inline_keyboard(row_width=3)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.cancel,
+                                 callback_data=cls.cancel_callback)
+        )
+        if with_next:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.next,
+                                     callback_data=cls.next_callback)
+            )
+        if with_skip:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.skip,
+                                     callback_data=cls.skip_callback)
+            )
+
+        return keyboard
