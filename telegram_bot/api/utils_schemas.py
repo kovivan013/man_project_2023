@@ -6,6 +6,7 @@ class PayloadStructure:
             username: str = None,
             name: str = None,
             description: str = None,
+            photo: str = None,
             tags: list = None,
             location: dict = None,
             date: int = None

@@ -17,6 +17,9 @@ class CurrentState:
         self.keyboard_class = keyboard_class
         self.state_class = state_class
 
+    async def state_attr(self):
+        return getattr(self.state_class, await self.get_name())
+
     async def get_state(self) -> dict:
         state: str = await self.state.get_state()
         if state is not None:

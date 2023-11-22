@@ -18,6 +18,13 @@ from man_project_2023.telegram_bot.keyboards.keyboards import (
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 
+
+class CalendarMenu:
+    # calendar (main menu: year select button, month select button, month day select button)
+    # year select (-5)
+    pass
+
+
 class StateStructure:
     def __init__(self, caption: str, media):
         self.caption = caption
@@ -49,17 +56,18 @@ class BranchManager:
         if current_state is not None:
             self.current_state = current_state
 
-        self.default_message = {
-            "media": {
-                "media": message.photo[0].file_id,
-                "caption": message.caption,
-                "parse_mode": "Markdown"
-            },
-            "reply_markup": message.reply_markup
-        }
+        if message is not None:
+            self.default_message = {
+                "media": {
+                    "media": message.photo[0].file_id,
+                    "caption": message.caption,
+                    "parse_mode": "Markdown"
+                },
+                "reply_markup": message.reply_markup
+            }
+            self.message = message
         if state is not None:
             self.state = state
-        self.message = message
 
     async def edit(self):
         data = await self.state_data()
@@ -143,7 +151,9 @@ class ContextManager:
                         current_menu=await self.current_state.get_placeholder()
                     ) if reply_markup is None else reply_markup)
                 return edited_message
-            except: return None
+            except Exception as err:
+                print(err)
+                return None
         self.is_used = True
 
 
@@ -275,9 +285,11 @@ class MyProfileMH:
 
     @classmethod
     async def my_gigs(cls, message: Message, state: FSMContext) -> None:
-
+        await cls.current_state.update_classes(keyboard_class=MyProfile,
+                                               state_class=MyProfile)
         await ProfileStates.gigs.set()
-        await contextManager.edit(image="dashboard_profile")
+        await contextManager.edit(current_state=cls.current_state,
+                                  image="dashboard_profile")
         if not await contextManager.states_equals():
             preview = open('img/423.png', 'rb')
             await contextManager.appent_delete_list(
@@ -432,7 +444,7 @@ class UpdateUsernameMH:
 class CreateGig:
 
     current_state: CurrentState = CurrentState(keyboard_class=UpdateProfile,
-                                               state_class=UpdateDescriptionStates)
+                                               state_class=CreateGigStates)
     branch_manager: BranchManager = BranchManager()
     data_for_send: PayloadStructure = None
 
@@ -446,17 +458,22 @@ class CreateGig:
                                                    image="dashboard_profile",
                                                    reply_markup=CreateGigMenu.keyboard(),
                                                    with_placeholder=False)
+
         await cls.branch_manager.set(current_state=cls.current_state,
                                      message=edited_message,
-                                     state=CreateGigStates.name)
+                                     state=await cls.current_state.state_attr())
         await cls.branch_manager.set_data(state_name=CreateGigStates.backward,
                                           caption="*Ви точно хочете закінчити редагування?*",
                                           image_name="test35459468345687456")
+
+
     @classmethod
     async def check_name(cls, message: Message, state: FSMContext) -> None:
+
+        # TODO: text validation
         cls.data_for_send.add(name=message.text)
         await message.delete()
-        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або уведіть *нову назву*:",
+        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або уведіть *іншу назву*:",
                                                    image="dashboard_profile",
                                                    reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
@@ -467,21 +484,55 @@ class CreateGig:
         await CreateGigStates.description.set()
         edited_message = await contextManager.edit(text=f"⌨️ *Уведіть опис оголошення:*",
                                                    image="dashboard_profile",
-                                                   reply_markup=CreateGigMenu.keyboard(with_skip=True),
+                                                   reply_markup=CreateGigMenu.keyboard(),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message,
+                                     state=await cls.current_state.state_attr())
+
+    @classmethod
+    async def check_description(cls, message: Message, state: FSMContext) -> None:
+        cls.data_for_send.add(description=message.text)
+        await message.delete()
+        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або уведіть *інший опис*:",
+                                                   image="dashboard_profile",
+                                                   reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
 
     @classmethod
-    async def check_description(cls, message: Message, state: FSMContext) -> None:
-        pass
-
-    @classmethod
     async def load_image(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        pass
+        await CreateGigStates.photo.set()
+        edited_message = await contextManager.edit(text=f"⌨️ *Відправте фотографію предмета, який знайшли:*",
+                                                   image="dashboard_profile",
+                                                   reply_markup=CreateGigMenu.keyboard(),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message,
+                                     state=await cls.current_state.state_attr())
 
     @classmethod
     async def check_image(cls, message: Message, state: FSMContext) -> None:
-        pass
+        # cls.data_for_send.add(photo=message.photo[0].file_id)
+
+        photo_file_id = message.photo[-1].file_id
+        photo_path = await bot.get_file(photo_file_id)
+
+        await bot.download_file(photo_path.file_path, "D:\\telegram_bots\\school_projects\\telegram_bot_man_project_2023\\man_project_2023\\telegram_bot\\img\\photo243524.jpg")
+        await message.delete()
+        # edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
+        #                                            image="dashboard_profile",
+        #                                            reply_markup=CreateGigMenu.keyboard(with_next=True),
+        #                                            with_placeholder=False)
+        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
+                                                   image="dashboard_profile",
+                                                   reply_markup={"inline_keyboard": [[{"text": "ПН", "callback_data": "1"},
+                                                                                      {"text": "ВТ", "callback_data": "2"},
+                                                                                      {"text": "СР", "callback_data": "3"},
+                                                                                      {"text": "ЧТ", "callback_data": "4"},
+                                                                                      {"text": "ПТ", "callback_data": "5"},
+                                                                                      {"text": "СБ", "callback_data": "6"},
+                                                                                      {"text": "НД", "callback_data": "7"}]]},
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message)
 
     @classmethod
     async def enter_location(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -501,6 +552,10 @@ class CreateGig:
 
     @classmethod
     async def confirm_backward(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        if not cls.data_for_send.as_dict():
+            await MyProfileMH.my_gigs(message=callback.message,
+                                      state=state)
+            return
         await CreateGigStates.backward.set()
         await cls.branch_manager.edit()
 
@@ -570,8 +625,26 @@ def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_callback_query_handler(
         CreateGig.enter_description, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.name
     )
+    dp.register_message_handler(
+        CreateGig.check_description, state=CreateGigStates.description
+    )
+    dp.register_callback_query_handler(
+        CreateGig.load_image, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.description
+    )
+    dp.register_message_handler(
+        CreateGig.check_image, content_types=ContentTypes.PHOTO, state=CreateGigStates.photo
+    )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.name
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.description
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.photo
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.my_gigs, Text(equals=YesOrNo.yes_callback), state=CreateGigStates.backward
     )
     dp.register_callback_query_handler(
         CreateGig.branch_manager.reset_message, Text(equals=YesOrNo.no_callback), state=CreateGigStates.backward

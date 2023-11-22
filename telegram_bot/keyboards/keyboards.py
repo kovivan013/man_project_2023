@@ -26,7 +26,7 @@ class YesOrNo:
 
     yes: str = f"✅ Так"
     no: str = f"❌ Ні"
-    cancel: str = f"🛑 Відміна"
+    cancel: str = f"🛑 Скасувати"
     skip: str = f"▶▶ Пропустити"
     save: str = f"📁 Зберегти"
 
