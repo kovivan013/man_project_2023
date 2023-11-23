@@ -13,16 +13,10 @@ ProfileStates, UpdateDescriptionStates, UpdateUsernameStates, CreateGigStates, C
 from aiogram.dispatcher.filters import Text
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu
+    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu
 )
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
-
-
-class CalendarMenu:
-    # calendar (main menu: year select button, month select button, month day select button)
-    # year select (-5)
-    pass
 
 
 class StateStructure:
@@ -516,21 +510,63 @@ class CreateGig:
         photo_file_id = message.photo[-1].file_id
         photo_path = await bot.get_file(photo_file_id)
 
-        await bot.download_file(photo_path.file_path, "D:\\telegram_bots\\school_projects\\telegram_bot_man_project_2023\\man_project_2023\\telegram_bot\\img\\photo243524.jpg")
+        await bot.download_file(photo_path.file_path, "D:\\telegram_bots\\school_projects\\telegram_bot_man2023\\man_project_2023\\telegram_bot\\img\\photo243524.jpg")
         await message.delete()
         # edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
         #                                            image="dashboard_profile",
         #                                            reply_markup=CreateGigMenu.keyboard(with_next=True),
         #                                            with_placeholder=False)
+        # dct = {"inline_keyboard": [[{"text": "ПН", "callback_data": "1"},
+        #                           {"text": "ВТ", "callback_data": "2"},
+        #                           {"text": "СР", "callback_data": "3"},
+        #                           {"text": "ЧТ", "callback_data": "4"},
+        #                           {"text": "ПТ", "callback_data": "5"},
+        #                           {"text": "СБ", "callback_data": "6"},
+        #                           {"text": "НД", "callback_data": "7"}]]}
+        # short_days = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
+        # days = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"]
+        # months = {
+        #     1: {"month": "Січень", "days": 31},
+        #     2: {"month": "Лютий", "days": 28},
+        #     3: {"month": "Березень", "days": 31},
+        #     4: {"month": "Квітень", "days": 30},
+        #     5: {"month": "Травень", "days": 31},
+        #     6: {"month": "Червень", "days": 30},
+        #     7: {"month": "Липень", "days": 31},
+        #     8: {"month": "Серпень", "days": 31},
+        #     9: {"month": "Вересень", "days": 30},
+        #     10: {"month": "Жовтень", "days": 31},
+        #     11: {"month": "Листопад", "days": 30},
+        #     12: {"month": "Грудень", "days": 31}
+        # }
+        # c = 1
+        # today = datetime.datetime.now()
+        # firts_month_day = datetime.datetime(today.year, today.month, 1)
+        # weekday = firts_month_day.weekday()
+        # end_weekday = 7 - weekday
+        # md = months[today.month]["days"]
+        # if md - end_weekday - 28 > 0:
+        #     n = 7
+        # else: n = 6
+        # for i in range(1, n):
+        #     level = []
+        #     for j in range(1, 8):
+        #         if c > md:
+        #             level.append({"text": " ",
+        #                           "callback_data": "em"})
+        #             continue
+        #         if i < 2 and i*j < weekday + 1:
+        #             level.append({"text": " ",
+        #                           "callback_data": "em"})
+        #             continue
+        #         level.append({"text": str(c),
+        #                       "callback_data": str(c)})
+        #         c+=1
+        #     dct["inline_keyboard"].append(level)
+
         edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
                                                    image="dashboard_profile",
-                                                   reply_markup={"inline_keyboard": [[{"text": "ПН", "callback_data": "1"},
-                                                                                      {"text": "ВТ", "callback_data": "2"},
-                                                                                      {"text": "СР", "callback_data": "3"},
-                                                                                      {"text": "ЧТ", "callback_data": "4"},
-                                                                                      {"text": "ПТ", "callback_data": "5"},
-                                                                                      {"text": "СБ", "callback_data": "6"},
-                                                                                      {"text": "НД", "callback_data": "7"}]]},
+                                                   reply_markup=CalendarMenu.keyboard(),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
 

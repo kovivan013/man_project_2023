@@ -3,6 +3,7 @@ from aiogram.types import (
 )
 from typing import Union
 from dataclasses import dataclass
+import datetime
 
 
 def default_reply_keyboard(one_time_keyboard: bool = True,
@@ -122,7 +123,10 @@ class Controls:
 
     forward: str = f"Вперед ▶"
     backward: str = f"◀ Назад"
-    close: str = f"Закрити ✖"
+    close: str = f"Зачинити ✖"
+
+    short_forward: str = f"▶"
+    short_backward: str = f"◀"
 
     forward_callback: str = f"forward_control_callback"
     backward_callback: str = f"backward_control_callback"
@@ -319,3 +323,74 @@ class CreateGigMenu(YesOrNo):
             )
 
         return keyboard
+
+
+class CalendarMenu(Controls):
+
+    short_days: list = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
+    days: list = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"]
+    months: dict = {1: {"month": "Січень", "days": 31}, 2: {"month": "Лютий", "days": 28},
+                    3: {"month": "Березень", "days": 31}, 4: {"month": "Квітень", "days": 30},
+                    5: {"month": "Травень", "days": 31}, 6: {"month": "Червень", "days": 30},
+                    7: {"month": "Липень", "days": 31}, 8: {"month": "Серпень", "days": 31},
+                    9: {"month": "Вересень", "days": 30}, 10: {"month": "Жовтень", "days": 31},
+                    11: {"month": "Листопад", "days": 30}, 12: {"month": "Грудень", "days": 31}
+    }
+
+    @classmethod
+    def keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=7)
+
+        day = 1
+        today = datetime.datetime.now()
+        firts_month_day = datetime.datetime(today.year, today.month, 1)
+        weekday = firts_month_day.weekday()
+        days_to_end = 7 - weekday
+        days_in_month = cls.months[today.month]["days"]
+
+        if today.year % 4 == 0 and today.month == 2:
+            days_in_month = 29
+
+        r = 6
+
+        if days_in_month - days_to_end - 28 > 0:
+            r+=1
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.short_backward,
+                                 callback_data=cls.backward_callback),
+            InlineKeyboardButton(text=f"{cls.months[today.month]['month']}, {today.year}",
+                                 callback_data="None")
+        )
+
+        days = []
+        for short_day in cls.short_days:
+            days.append(
+                InlineKeyboardButton(
+                    text=short_day,
+                    callback_data="None"
+                )
+            )
+        print(*days)
+        keyboard.row(*days)
+
+        for i in range(1, r):
+            for j in range(1, 8):
+                if day > days_in_month or (i<2 and j < weekday + 1):
+                    keyboard.insert(
+                        InlineKeyboardButton(
+                            text=" ",
+                            callback_data="None"
+                        )
+                    )
+                    continue
+                keyboard.insert(
+                    InlineKeyboardButton(
+                        text=f"{day}",
+                        callback_data=f"{day}_date_callback"
+                    )
+                )
+                day += 1
+
+        return keyboard
+
