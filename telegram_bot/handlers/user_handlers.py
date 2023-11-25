@@ -615,7 +615,7 @@ class CreateGig:
         await cls.select_date.update_dates()
         edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
                                                    image="dashboard_profile",
-                                                   reply_markup=CalendarMenu.keyboard(),
+                                                   reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
 
@@ -629,11 +629,19 @@ class CreateGig:
 
     @classmethod
     async def enter_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        pass
+        await CreateGigStates.date.set()
+        edited_message = await contextManager.edit(text=f"⌨️ *Оберіть дату, коли була знайдена річ:*",
+                                                   image="dashboard_profile",
+                                                   reply_markup=CalendarMenu.keyboard(with_cancel=True),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message,
+                                     state=await cls.current_state.state_attr())
 
     @classmethod
-    async def check_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        pass
+    async def set_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        date = int(callback.data.split("_")[0])
+        print(date, datetime.datetime.fromtimestamp(date))
+        cls.data_for_send.add(date=date)
 
     @classmethod
     async def confirm_backward(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -720,6 +728,12 @@ def register_user_handlers(dp: Dispatcher) -> None:
         CreateGig.check_image, content_types=ContentTypes.PHOTO, state=CreateGigStates.photo
     )
     dp.register_callback_query_handler(
+        CreateGig.enter_date, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.photo
+    )
+    dp.register_callback_query_handler(
+        CreateGig.set_date, Text(endswith="_date_callback"), state=CreateGigStates.date
+    )
+    dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.name
     )
     dp.register_callback_query_handler(
@@ -729,14 +743,17 @@ def register_user_handlers(dp: Dispatcher) -> None:
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.photo
     )
     dp.register_callback_query_handler(
+        CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.date
+    )
+    dp.register_callback_query_handler(
         MyProfileMH.my_gigs, Text(equals=YesOrNo.yes_callback), state=CreateGigStates.backward
     )
     dp.register_callback_query_handler(
         CreateGig.branch_manager.reset_message, Text(equals=YesOrNo.no_callback), state=CreateGigStates.backward
     )
     dp.register_callback_query_handler(
-        CreateGig.select_date.move_forward, Text(equals=Controls.forward_callback), state=CreateGigStates.photo
+        CreateGig.select_date.move_forward, Text(equals=Controls.forward_callback), state=CreateGigStates.date
     )
     dp.register_callback_query_handler(
-        CreateGig.select_date.move_bacward, Text(equals=Controls.backward_callback), state=CreateGigStates.photo
+        CreateGig.select_date.move_bacward, Text(equals=Controls.backward_callback), state=CreateGigStates.date
     )

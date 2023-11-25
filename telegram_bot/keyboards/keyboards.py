@@ -30,12 +30,14 @@ class YesOrNo:
     cancel: str = f"🛑 Скасувати"
     skip: str = f"▶▶ Пропустити"
     save: str = f"📁 Зберегти"
+    next: str = "Далі ↪️"
 
     yes_callback: str = f"yes_callback"
     no_callback: str = f"no_callback"
     cancel_callback: str = f"cancel_callback"
     skip_callback: str = f"skip_callback"
     save_callback: str = f"save_callback"
+    next_callback: str = "next_callback"
 
     @classmethod
     def keyboard(cls, is_inline_keyboard: bool = False):
@@ -300,9 +302,6 @@ class UpdateProfile(Controls, YesOrNo):
 
 class CreateGigMenu(YesOrNo):
 
-    next: str = "Далі ↪️"
-    next_callback: str = "next_callback"
-
     @classmethod
     def keyboard(cls, with_next: bool = False, with_skip: bool = False):
         keyboard = default_inline_keyboard(row_width=3)
@@ -325,7 +324,7 @@ class CreateGigMenu(YesOrNo):
         return keyboard
 
 
-class CalendarMenu(Controls):
+class CalendarMenu(Controls, YesOrNo):
 
     short_days: list = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
     days: list = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"]
@@ -338,11 +337,12 @@ class CalendarMenu(Controls):
     }
 
     @classmethod
-    def keyboard(cls, year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
+    def keyboard(cls, with_cancel: bool = False, with_save: bool = False,
+                 year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=7)
 
         args = all([year, month, day])
-        print(args)
+
         if args:
             today = datetime.datetime(year, month, day)
         else:
@@ -368,6 +368,13 @@ class CalendarMenu(Controls):
                                  callback_data="None")
         )
 
+        keyboard.add(
+            InlineKeyboardButton(text=cls.short_backward,
+                                 callback_data=cls.backward_callback),
+            InlineKeyboardButton(text=cls.short_forward,
+                                 callback_data=cls.forward_callback)
+        )
+
         days = []
         for short_day in cls.short_days:
             days.append(
@@ -389,20 +396,27 @@ class CalendarMenu(Controls):
                         )
                     )
                     continue
+                callback = int(datetime.datetime(today.year,
+                                                 today.month,
+                                                 day).timestamp())
                 keyboard.insert(
                     InlineKeyboardButton(
                         text=f"{day}",
-                        callback_data=f"{day}_date_callback"
+                        callback_data=f"{callback}_date_callback"
                     )
                 )
                 day += 1
 
-        keyboard.add(
-            InlineKeyboardButton(text=cls.short_backward,
-                                 callback_data=cls.backward_callback),
-            InlineKeyboardButton(text=cls.short_forward,
-                                 callback_data=cls.forward_callback)
-        )
+        if with_cancel:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.cancel,
+                                     callback_data=cls.cancel_callback)
+            )
+            if with_save:
+                keyboard.insert(
+                    InlineKeyboardButton(text=cls.next,
+                                         callback_data=cls.next_callback)
+                )
 
         return keyboard
 
