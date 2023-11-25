@@ -19,6 +19,54 @@ from man_project_2023.telegram_bot.classes.api_requests import UserAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 
 
+class Calendar:
+
+    def __init__(self):
+        self.year: int = 0
+        self.month: int = 0
+        self.day: int = 0
+
+    def now(self):
+        return datetime.datetime.now()
+
+    async def edit(self):
+        await self.update_dates()
+
+    async def move_forward(self, callback: CallbackQuery, state: FSMContext) -> None:
+        if self.month >= self.now().month and self.year >= self.now().year:
+            return
+        if self.month == 12:
+            self.month = 1
+            self.year += 1
+        else:
+            self.month += 1
+        await callback.message.edit_reply_markup(
+            reply_markup=CalendarMenu.keyboard(year=self.year,
+                                               month=self.month,
+                                               day=self.day)
+        )
+
+    async def move_bacward(self, callback: CallbackQuery, state: FSMContext) -> None:
+        if self.month == 1:
+            self.month = 12
+            self.year -= 1
+        else:
+            self.month -= 1
+        await callback.message.edit_reply_markup(
+            reply_markup=CalendarMenu.keyboard(year=self.year,
+                                               month=self.month,
+                                               day=self.day)
+        )
+        print(self.__dict__)
+        return self.__dict__
+
+    async def update_dates(self) -> None:
+        now = datetime.datetime.now()
+        self.year = now.year
+        self.month = now.month
+        self.day = now.day
+
+
 class StateStructure:
     def __init__(self, caption: str, media):
         self.caption = caption
@@ -441,6 +489,7 @@ class CreateGig:
                                                state_class=CreateGigStates)
     branch_manager: BranchManager = BranchManager()
     data_for_send: PayloadStructure = None
+    select_date = Calendar()
 
     @classmethod
     async def enter_name(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -563,7 +612,7 @@ class CreateGig:
         #                       "callback_data": str(c)})
         #         c+=1
         #     dct["inline_keyboard"].append(level)
-
+        await cls.select_date.update_dates()
         edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
                                                    image="dashboard_profile",
                                                    reply_markup=CalendarMenu.keyboard(),
@@ -684,4 +733,10 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         CreateGig.branch_manager.reset_message, Text(equals=YesOrNo.no_callback), state=CreateGigStates.backward
+    )
+    dp.register_callback_query_handler(
+        CreateGig.select_date.move_forward, Text(equals=Controls.forward_callback), state=CreateGigStates.photo
+    )
+    dp.register_callback_query_handler(
+        CreateGig.select_date.move_bacward, Text(equals=Controls.backward_callback), state=CreateGigStates.photo
     )

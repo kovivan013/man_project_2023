@@ -338,15 +338,22 @@ class CalendarMenu(Controls):
     }
 
     @classmethod
-    def keyboard(cls) -> Union[InlineKeyboardMarkup]:
+    def keyboard(cls, year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=7)
 
-        day = 1
-        today = datetime.datetime.now()
+        args = all([year, month, day])
+        print(args)
+        if args:
+            today = datetime.datetime(year, month, day)
+        else:
+            today = datetime.datetime.now()
+
         firts_month_day = datetime.datetime(today.year, today.month, 1)
         weekday = firts_month_day.weekday()
         days_to_end = 7 - weekday
         days_in_month = cls.months[today.month]["days"]
+
+        day = 1
 
         if today.year % 4 == 0 and today.month == 2:
             days_in_month = 29
@@ -357,8 +364,6 @@ class CalendarMenu(Controls):
             r+=1
 
         keyboard.add(
-            InlineKeyboardButton(text=cls.short_backward,
-                                 callback_data=cls.backward_callback),
             InlineKeyboardButton(text=f"{cls.months[today.month]['month']}, {today.year}",
                                  callback_data="None")
         )
@@ -371,7 +376,7 @@ class CalendarMenu(Controls):
                     callback_data="None"
                 )
             )
-        print(*days)
+
         keyboard.row(*days)
 
         for i in range(1, r):
@@ -391,6 +396,13 @@ class CalendarMenu(Controls):
                     )
                 )
                 day += 1
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.short_backward,
+                                 callback_data=cls.backward_callback),
+            InlineKeyboardButton(text=cls.short_forward,
+                                 callback_data=cls.forward_callback)
+        )
 
         return keyboard
 
