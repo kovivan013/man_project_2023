@@ -8,19 +8,28 @@ class API:
     __BASE_SERVER_URL: str = BASE_API_URL
 
     @classmethod
-    async def _get_request(cls, endpoint: str):
-        url: str = cls.__BASE_SERVER_URL + endpoint
+    async def _get_request(cls, endpoint: str, base_request: bool = True):
+        if base_request:
+            url: str = cls.__BASE_SERVER_URL + endpoint
+        else:
+            url: str = endpoint
         return await GetRequest(url=url).send_request()
 
     @classmethod
-    async def _post_request(cls, endpoint: str, data: dict):
-        url: str = cls.__BASE_SERVER_URL + endpoint
+    async def _post_request(cls, endpoint: str, data: dict, base_request: bool = True):
+        if base_request:
+            url: str = cls.__BASE_SERVER_URL + endpoint
+        else:
+            url: str = endpoint
         return await PostRequest(url=url,
                                  data=data).send_request()
 
     @classmethod
-    async def _patch_request(cls, endpoint: str, data: dict):
-        url: str = cls.__BASE_SERVER_URL + endpoint
+    async def _patch_request(cls, endpoint: str, data: dict, base_request: bool = True):
+        if base_request:
+            url: str = cls.__BASE_SERVER_URL + endpoint
+        else:
+            url: str = endpoint
         return await PatchRequest(url=url,
                                   data=data).send_request()
 
@@ -69,3 +78,27 @@ class AdminAPI(API):
 
 class SystemAPI(API):
     __prefix = lambda endpoint: "/system" + endpoint
+
+class LocationAPI(API):
+
+    __URL = "https://nominatim.openstreetmap.org/reverse"
+
+    @classmethod
+    async def get_address(cls, latitude: float, longitude: float):
+        endpoint: str = cls.__URL
+
+        data: dict = {
+            "format": "json",
+            "lat": latitude,
+            "lon": longitude
+        }
+
+        return await cls._get_request(endpoint=endpoint,
+                                      base_request=False)
+
+
+import asyncio
+
+print(asyncio.run(LocationAPI.get_address(latitude=49.55319,
+                                          longitude=25.62314)))
+

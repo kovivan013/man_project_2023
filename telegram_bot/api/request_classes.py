@@ -33,19 +33,26 @@ class RequestSender(ABC):
 
         # validate answer data
         result = DataStructure(**answer.data)
-        if result.success:
-            return result
-        elif answer.status not in range(200, 300):
+        result.data = answer.data["data"] if "data" in answer.data else answer.data
+
+        if answer.status not in range(200, 300):
             error_text: str = (
                 f"Status: {answer.status}\n"
                 f"Url: {self.url}\n"
                 f"Error data: {answer.data}"
             )
             return error_text
+        return result
 
 class GetRequest(RequestSender):
     async def _send(self, session) -> dict:
-        async with session.get(**self._payload) as response:
+        geo = {'format': 'json', 'lat': f'{49.55319}', 'lon': f'{25.62314}'}
+        async with session.get(self._payload["url"], params=geo) as response:
+            print(response.status)
+            print(ResponseStructure(
+                status=response.status,
+                data=await response.json()
+            )._as_dict())
             return ResponseStructure(
                 status=response.status,
                 data=await response.json()

@@ -336,8 +336,12 @@ class CalendarMenu(Controls, YesOrNo):
                     11: {"month": "Листопад", "days": 30}, 12: {"month": "Грудень", "days": 31}
     }
 
+    now: str = f"🗓️ Зараз"
+
+    date_callback: str = f"_date_callback"
+
     @classmethod
-    def keyboard(cls, with_cancel: bool = False, with_save: bool = False,
+    def keyboard(cls, with_cancel: bool = False, with_save: bool = False, with_forward: bool = True,
                  year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=7)
 
@@ -348,6 +352,7 @@ class CalendarMenu(Controls, YesOrNo):
         else:
             today = datetime.datetime.now()
 
+        now = datetime.datetime.now()
         firts_month_day = datetime.datetime(today.year, today.month, 1)
         weekday = firts_month_day.weekday()
         days_to_end = 7 - weekday
@@ -370,10 +375,14 @@ class CalendarMenu(Controls, YesOrNo):
 
         keyboard.add(
             InlineKeyboardButton(text=cls.short_backward,
-                                 callback_data=cls.backward_callback),
-            InlineKeyboardButton(text=cls.short_forward,
-                                 callback_data=cls.forward_callback)
+                                 callback_data=cls.backward_callback)
         )
+
+        if with_forward:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.short_forward,
+                                     callback_data=cls.forward_callback)
+            )
 
         days = []
         for short_day in cls.short_days:
@@ -402,10 +411,16 @@ class CalendarMenu(Controls, YesOrNo):
                 keyboard.insert(
                     InlineKeyboardButton(
                         text=f"{day}",
-                        callback_data=f"{callback}_date_callback"
+                        callback_data=f"{callback}{cls.date_callback}"
                     )
                 )
                 day += 1
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.now,
+                                 callback_data=f"now{cls.date_callback}"
+            )
+        )
 
         if with_cancel:
             keyboard.add(
@@ -417,6 +432,7 @@ class CalendarMenu(Controls, YesOrNo):
                     InlineKeyboardButton(text=cls.next,
                                          callback_data=cls.next_callback)
                 )
+
 
         return keyboard
 

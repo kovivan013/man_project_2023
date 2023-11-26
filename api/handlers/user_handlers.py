@@ -46,6 +46,7 @@ def create_user(user: UserCreate, response: Response, request: Request, db: Sess
     result.status = status.HTTP_201_CREATED
     result.success = True
     result.message = "test"
+    result.data = data
 
     return PostRequest(db=db,
                        response=response,

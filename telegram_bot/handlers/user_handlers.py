@@ -29,22 +29,29 @@ class Calendar:
     def now(self):
         return datetime.datetime.now()
 
-    async def edit(self):
-        await self.update_dates()
+    async def edit(self, callback: CallbackQuery, with_forward: bool = True):
+        await callback.message.edit_reply_markup(
+            reply_markup=CalendarMenu.keyboard(year=self.year,
+                                               month=self.month,
+                                               day=self.day,
+                                               with_cancel=True,
+                                               with_forward=with_forward)
+        )
 
     async def move_forward(self, callback: CallbackQuery, state: FSMContext) -> None:
+        with_forward = True
         if self.month >= self.now().month and self.year >= self.now().year:
             return
+        if self.month + 1 >= self.now().month and self.year >= self.now().year:
+            with_forward = False
+
         if self.month == 12:
             self.month = 1
             self.year += 1
         else:
             self.month += 1
-        await callback.message.edit_reply_markup(
-            reply_markup=CalendarMenu.keyboard(year=self.year,
-                                               month=self.month,
-                                               day=self.day)
-        )
+        await self.edit(callback=callback,
+                        with_forward=with_forward)
 
     async def move_bacward(self, callback: CallbackQuery, state: FSMContext) -> None:
         if self.month == 1:
@@ -52,13 +59,8 @@ class Calendar:
             self.year -= 1
         else:
             self.month -= 1
-        await callback.message.edit_reply_markup(
-            reply_markup=CalendarMenu.keyboard(year=self.year,
-                                               month=self.month,
-                                               day=self.day)
-        )
-        print(self.__dict__)
-        return self.__dict__
+        await self.edit(callback=callback)
+
 
     async def update_dates(self) -> None:
         now = datetime.datetime.now()
@@ -612,7 +614,6 @@ class CreateGig:
         #                       "callback_data": str(c)})
         #         c+=1
         #     dct["inline_keyboard"].append(level)
-        await cls.select_date.update_dates()
         edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
                                                    image="dashboard_profile",
                                                    reply_markup=CreateGigMenu.keyboard(with_next=True),
@@ -621,25 +622,37 @@ class CreateGig:
 
     @classmethod
     async def enter_location(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        pass
+        await CreateGigStates.location.set()
+        edited_message = await contextManager.edit(text=f"⌨️ *Локація:*",
+                                                   image="dashboard_profile",
+                                                   reply_markup=CreateGigMenu.keyboard(),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message,
+                                     state=await cls.current_state.state_attr())
 
     @classmethod
     async def check_location(cls, message: Message, state: FSMContext) -> None:
-        pass
+        print(message.location.longitude)
+        print(message.location.latitude)
 
     @classmethod
     async def enter_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await CreateGigStates.date.set()
+        await cls.select_date.update_dates()
         edited_message = await contextManager.edit(text=f"⌨️ *Оберіть дату, коли була знайдена річ:*",
                                                    image="dashboard_profile",
-                                                   reply_markup=CalendarMenu.keyboard(with_cancel=True),
+                                                   reply_markup=CalendarMenu.keyboard(with_cancel=True, with_forward=False),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message,
                                      state=await cls.current_state.state_attr())
 
     @classmethod
     async def set_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        date = int(callback.data.split("_")[0])
+        await callback.answer()
+        if callback.data.startswith("now"):
+            date = int(datetime.datetime.now().timestamp())
+        else:
+            date = int(callback.data.split("_")[0])
         print(date, datetime.datetime.fromtimestamp(date))
         cls.data_for_send.add(date=date)
 
@@ -728,10 +741,16 @@ def register_user_handlers(dp: Dispatcher) -> None:
         CreateGig.check_image, content_types=ContentTypes.PHOTO, state=CreateGigStates.photo
     )
     dp.register_callback_query_handler(
-        CreateGig.enter_date, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.photo
+        CreateGig.enter_location, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.photo
+    )
+    dp.register_message_handler(
+        CreateGig.check_location, content_types=ContentTypes.LOCATION, state=CreateGigStates.location
     )
     dp.register_callback_query_handler(
-        CreateGig.set_date, Text(endswith="_date_callback"), state=CreateGigStates.date
+        CreateGig.enter_date, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.location
+    )
+    dp.register_callback_query_handler(
+        CreateGig.set_date, Text(endswith=CalendarMenu.date_callback), state=CreateGigStates.date
     )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.name
