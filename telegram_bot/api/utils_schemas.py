@@ -37,3 +37,20 @@ class ResponseStructure:
     def _as_dict(self) -> dict:
         return self.__dict__
 
+class AddressUtils:
+
+    def __init__(self, location: dict) -> None:
+        self.location = location
+
+    async def get_city(self):
+        address: dict = self.location["address"]
+
+        keys: list = ['city', 'town', 'village', 'municipality']
+
+        for i in keys:
+            if i in address.keys():
+                return address[i]
+
+
+
+

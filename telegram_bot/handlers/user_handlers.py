@@ -15,7 +15,7 @@ from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
     InlineKeyboardMarkup, CreateGigMenu, CalendarMenu
 )
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI
+from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AddressUtils, LocationAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 
 
@@ -632,6 +632,12 @@ class CreateGig:
 
     @classmethod
     async def check_location(cls, message: Message, state: FSMContext) -> None:
+        la = await LocationAPI.get_address(latitude=message.location.latitude,
+                                           longitude=message.location.longitude)
+        l = AddressUtils(location=la.data)
+        loc = await l.get_city()
+        await message.answer(text=loc)
+        print(loc)
         print(message.location.longitude)
         print(message.location.latitude)
 

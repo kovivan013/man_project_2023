@@ -42,17 +42,17 @@ class RequestSender(ABC):
                 f"Error data: {answer.data}"
             )
             return error_text
+        result.success = True
         return result
 
 class GetRequest(RequestSender):
+    def __init__(self, url: str = "", data: dict = None):
+        super().__init__(url)
+        self._data_for_send: dict = data
     async def _send(self, session) -> dict:
-        geo = {'format': 'json', 'lat': f'{49.55319}', 'lon': f'{25.62314}'}
-        async with session.get(self._payload["url"], params=geo) as response:
-            print(response.status)
-            print(ResponseStructure(
-                status=response.status,
-                data=await response.json()
-            )._as_dict())
+        self._payload.update(params=self._data_for_send)
+        print(self._payload)
+        async with session.get(**self._payload) as response:
             return ResponseStructure(
                 status=response.status,
                 data=await response.json()
