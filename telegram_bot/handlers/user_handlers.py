@@ -11,15 +11,20 @@ from man_project_2023.telegram_bot.states.states import (
 ProfileStates, UpdateDescriptionStates, UpdateUsernameStates, CreateGigStates, CurrentState, State
 )
 from aiogram.dispatcher.filters import Text
+from man_project_2023.telegram_bot.utils.utils import  Utils
+from man_project_2023.photos_database.handlers import PhotosDB
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
     InlineKeyboardMarkup, CreateGigMenu, CalendarMenu
 )
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AddressUtils, LocationAPI
+from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 
 
-class Calendar:
+utils = Utils()
+
+
+class Calendar(CalendarMenu):
 
     def __init__(self):
         self.year: int = 0
@@ -61,6 +66,9 @@ class Calendar:
             self.month -= 1
         await self.edit(callback=callback)
 
+    async def to_date(self, timestamp: int):
+        date = datetime.datetime.fromtimestamp(timestamp)
+        return f"{date.day} {self.months[date.month]['case']}, {date.year} року"
 
     async def update_dates(self) -> None:
         now = datetime.datetime.now()
@@ -175,6 +183,7 @@ class ContextManager:
     async def edit(self, current_state: CurrentState = None,
                    text: str = None,
                    image: str = None,
+                   file_id: str = None,
                    reply_markup: InlineKeyboardMarkup = None,
                    with_placeholder: bool = True):
         if current_state is not None:
@@ -185,7 +194,7 @@ class ContextManager:
                 await self.delete_context_messages()
 
             try:
-                media = await self.current_state.state_photo(image=image)
+                media = await self.current_state.state_photo(image=image) if not file_id else file_id
                 edited_message = await self.message.edit_media(media=InputMediaPhoto(
                     media=media,
                     caption=text,
@@ -199,8 +208,6 @@ class ContextManager:
                 print(err)
                 return None
         self.is_used = True
-
-
 
     async def appent_delete_list(self, message: Message):
         self.messages_to_delete.append(message.message_id)
@@ -277,6 +284,7 @@ class StartMH:
             await cls.seeker.cls_menu(message)
 
 contextManager = ContextManager()
+photos_db = PhotosDB(bot=bot)
 
 class MyProfileMH:
 
@@ -518,7 +526,9 @@ class CreateGig:
         # TODO: text validation
         cls.data_for_send.add(name=message.text)
         await message.delete()
-        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або уведіть *іншу назву*:",
+        edited_message = await contextManager.edit(text=f"Ви увели: *{message.text}*\n\n"
+                                                        f""
+                                                        f"👆 Натисніть *\"Далі\"* або уведіть *іншу назву*:",
                                                    image="dashboard_profile",
                                                    reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
@@ -538,7 +548,9 @@ class CreateGig:
     async def check_description(cls, message: Message, state: FSMContext) -> None:
         cls.data_for_send.add(description=message.text)
         await message.delete()
-        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або уведіть *інший опис*:",
+        edited_message = await contextManager.edit(text=f"Ви увели: *{message.text}*\n\n"
+                                                        f""
+                                                        f"👆 Натисніть *\"Далі\"* або уведіть *інший опис*:",
                                                    image="dashboard_profile",
                                                    reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
@@ -549,73 +561,24 @@ class CreateGig:
         await CreateGigStates.photo.set()
         edited_message = await contextManager.edit(text=f"⌨️ *Відправте фотографію предмета, який знайшли:*",
                                                    image="dashboard_profile",
-                                                   reply_markup=CreateGigMenu.keyboard(),
+                                                   reply_markup=CreateGigMenu.keyboard(with_faq=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message,
                                      state=await cls.current_state.state_attr())
 
     @classmethod
     async def check_image(cls, message: Message, state: FSMContext) -> None:
-        # cls.data_for_send.add(photo=message.photo[0].file_id)
 
-        photo_file_id = message.photo[-1].file_id
-        photo_path = await bot.get_file(photo_file_id)
-
-        await bot.download_file(photo_path.file_path, "D:\\telegram_bots\\school_projects\\telegram_bot_man2023\\man_project_2023\\telegram_bot\\img\\photo243524.jpg")
+        file_id = utils.file_id(message=message)
+        cls.data_for_send.add(photo=file_id)
+        await photos_db.save(telegram_id=1125858430,
+                             file_id=file_id,
+                             gig_id="dfhgbd")
         await message.delete()
-        # edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
-        #                                            image="dashboard_profile",
-        #                                            reply_markup=CreateGigMenu.keyboard(with_next=True),
-        #                                            with_placeholder=False)
-        # dct = {"inline_keyboard": [[{"text": "ПН", "callback_data": "1"},
-        #                           {"text": "ВТ", "callback_data": "2"},
-        #                           {"text": "СР", "callback_data": "3"},
-        #                           {"text": "ЧТ", "callback_data": "4"},
-        #                           {"text": "ПТ", "callback_data": "5"},
-        #                           {"text": "СБ", "callback_data": "6"},
-        #                           {"text": "НД", "callback_data": "7"}]]}
-        # short_days = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
-        # days = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"]
-        # months = {
-        #     1: {"month": "Січень", "days": 31},
-        #     2: {"month": "Лютий", "days": 28},
-        #     3: {"month": "Березень", "days": 31},
-        #     4: {"month": "Квітень", "days": 30},
-        #     5: {"month": "Травень", "days": 31},
-        #     6: {"month": "Червень", "days": 30},
-        #     7: {"month": "Липень", "days": 31},
-        #     8: {"month": "Серпень", "days": 31},
-        #     9: {"month": "Вересень", "days": 30},
-        #     10: {"month": "Жовтень", "days": 31},
-        #     11: {"month": "Листопад", "days": 30},
-        #     12: {"month": "Грудень", "days": 31}
-        # }
-        # c = 1
-        # today = datetime.datetime.now()
-        # firts_month_day = datetime.datetime(today.year, today.month, 1)
-        # weekday = firts_month_day.weekday()
-        # end_weekday = 7 - weekday
-        # md = months[today.month]["days"]
-        # if md - end_weekday - 28 > 0:
-        #     n = 7
-        # else: n = 6
-        # for i in range(1, n):
-        #     level = []
-        #     for j in range(1, 8):
-        #         if c > md:
-        #             level.append({"text": " ",
-        #                           "callback_data": "em"})
-        #             continue
-        #         if i < 2 and i*j < weekday + 1:
-        #             level.append({"text": " ",
-        #                           "callback_data": "em"})
-        #             continue
-        #         level.append({"text": str(c),
-        #                       "callback_data": str(c)})
-        #         c+=1
-        #     dct["inline_keyboard"].append(level)
-        edited_message = await contextManager.edit(text="👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
-                                                   image="dashboard_profile",
+        edited_message = await contextManager.edit(text=f"▲ Ви відправили фотографію\n\n"
+                                                        f""
+                                                        f"👆 Натисніть *\"Далі\"* або відправте *іншу фотографію*:",
+                                                   file_id=file_id,
                                                    reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
@@ -623,23 +586,29 @@ class CreateGig:
     @classmethod
     async def enter_location(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await CreateGigStates.location.set()
-        edited_message = await contextManager.edit(text=f"⌨️ *Локація:*",
+        edited_message = await contextManager.edit(text=f"⌨️ *Відправте локацію місця, де ви знайшли річ:*",
                                                    image="dashboard_profile",
-                                                   reply_markup=CreateGigMenu.keyboard(),
+                                                   reply_markup=CreateGigMenu.keyboard(with_faq=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message,
                                      state=await cls.current_state.state_attr())
 
     @classmethod
     async def check_location(cls, message: Message, state: FSMContext) -> None:
-        la = await LocationAPI.get_address(latitude=message.location.latitude,
-                                           longitude=message.location.longitude)
-        l = AddressUtils(location=la.data)
-        loc = await l.get_city()
-        await message.answer(text=loc)
-        print(loc)
-        print(message.location.longitude)
-        print(message.location.latitude)
+        location = utils.location(message=message)
+        address = await LocationAPI.get_address(**location)
+        city = await LocationStructure(location=address.data).get_city(with_type=True)
+
+        cls.data_for_send.add(location=location)
+        await message.delete()
+        edited_message = await contextManager.edit(text=f"Ви вказали: *{city}*\n\n"
+                                                        f""
+                                                        f"👆 Натисніть *\"Далі\"* або відправте локацію *іншого місця*:",
+                                                   image="dashboard_profile",
+                                                   reply_markup=CreateGigMenu.keyboard(with_next=True),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message)
+        print(f"{city}\n{location}")
 
     @classmethod
     async def enter_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -656,11 +625,19 @@ class CreateGig:
     async def set_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await callback.answer()
         if callback.data.startswith("now"):
-            date = int(datetime.datetime.now().timestamp())
+            timestamp = utils.now()
         else:
-            date = int(callback.data.split("_")[0])
-        print(date, datetime.datetime.fromtimestamp(date))
-        cls.data_for_send.add(date=date)
+            timestamp = int(callback.data.split("_")[0])
+        date = await cls.select_date.to_date(timestamp=timestamp)
+        edited_message = await contextManager.edit(text=f"Ви обрали *{date}*\n\n"
+                                                        f""
+                                                        f"👆 Натисніть *\"Далі\"* або оберіть *іншу дату*:",
+                                                   image="dashboard_profile",
+                                                   reply_markup=CalendarMenu.keyboard(with_cancel=True, with_forward=True),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message)
+        print(timestamp, datetime.datetime.fromtimestamp(timestamp))
+        cls.data_for_send.add(date=timestamp)
 
     @classmethod
     async def confirm_backward(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -766,6 +743,9 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.photo
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.location
     )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.date

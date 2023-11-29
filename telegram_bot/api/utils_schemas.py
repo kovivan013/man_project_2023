@@ -9,6 +9,8 @@ class PayloadStructure:
             photo: str = None,
             tags: list = None,
             location: dict = None,
+            latitude: float = None,
+            longitude: float = None,
             date: int = None
             ):
         data: dict = locals()
@@ -37,19 +39,23 @@ class ResponseStructure:
     def _as_dict(self) -> dict:
         return self.__dict__
 
-class AddressUtils:
+class LocationStructure:
 
     def __init__(self, location: dict) -> None:
         self.location = location
 
-    async def get_city(self):
+    async def get_city(self, with_type: bool = False):
         address: dict = self.location["address"]
 
-        keys: list = ['city', 'town', 'village', 'municipality']
+        keys: dict = {"city": {"type": "місто"},
+                      "town": {"type": "місто"},
+                      "village": {"type": "село"},
+                      "municipality": {"type": ""}}
 
-        for i in keys:
+        for i, v in keys.items():
             if i in address.keys():
-                return address[i]
+                city: str = f"{v['type'] + ' ' if with_type and v['type'] else ''}{address[i]}"
+                return city
 
 
 

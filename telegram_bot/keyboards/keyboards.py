@@ -27,6 +27,7 @@ class YesOrNo:
 
     yes: str = f"✅ Так"
     no: str = f"❌ Ні"
+    ready: str = f"✅ Готово"
     cancel: str = f"🛑 Скасувати"
     skip: str = f"▶▶ Пропустити"
     save: str = f"📁 Зберегти"
@@ -34,6 +35,7 @@ class YesOrNo:
 
     yes_callback: str = f"yes_callback"
     no_callback: str = f"no_callback"
+    ready_callback: str = f"ready_callback"
     cancel_callback: str = f"cancel_callback"
     skip_callback: str = f"skip_callback"
     save_callback: str = f"save_callback"
@@ -302,8 +304,13 @@ class UpdateProfile(Controls, YesOrNo):
 
 class CreateGigMenu(YesOrNo):
 
+    faq: str = f"❓ Як?"
+
+    faq_callback: str = f"❓ Як?"
+
     @classmethod
-    def keyboard(cls, with_next: bool = False, with_skip: bool = False):
+    def keyboard(cls, with_next: bool = False, with_faq: bool = False,
+                 with_skip: bool = False, with_ready: bool = False):
         keyboard = default_inline_keyboard(row_width=3)
 
         keyboard.add(
@@ -315,10 +322,20 @@ class CreateGigMenu(YesOrNo):
                 InlineKeyboardButton(text=cls.next,
                                      callback_data=cls.next_callback)
             )
+        if with_faq:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.faq,
+                                     callback_data=cls.faq_callback)
+            )
         if with_skip:
             keyboard.insert(
                 InlineKeyboardButton(text=cls.skip,
                                      callback_data=cls.skip_callback)
+            )
+        if with_ready:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.ready,
+                                     callback_data=cls.ready_callback)
             )
 
         return keyboard
@@ -328,12 +345,13 @@ class CalendarMenu(Controls, YesOrNo):
 
     short_days: list = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
     days: list = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"]
-    months: dict = {1: {"month": "Січень", "days": 31}, 2: {"month": "Лютий", "days": 28},
-                    3: {"month": "Березень", "days": 31}, 4: {"month": "Квітень", "days": 30},
-                    5: {"month": "Травень", "days": 31}, 6: {"month": "Червень", "days": 30},
-                    7: {"month": "Липень", "days": 31}, 8: {"month": "Серпень", "days": 31},
-                    9: {"month": "Вересень", "days": 30}, 10: {"month": "Жовтень", "days": 31},
-                    11: {"month": "Листопад", "days": 30}, 12: {"month": "Грудень", "days": 31}
+    months = {
+        1: {"month": "Січень", "days": 31, "case": "Січня"}, 2: {"month": "Лютий", "days": 28, "case": "Лютого"},
+        3: {"month": "Березень", "days": 31, "case": "Березня"}, 4: {"month": "Квітень", "days": 30, "case": "Квітня"},
+        5: {"month": "Травень", "days": 31, "case": "Травня"}, 6: {"month": "Червень", "days": 30, "case": "Червня"},
+        7: {"month": "Липень", "days": 31, "case": "Липня"}, 8: {"month": "Серпень", "days": 31, "case": "Серпня"},
+        9: {"month": "Вересень", "days": 30, "case": "Вересня"}, 10: {"month": "Жовтень", "days": 31, "case": "Жовтня"},
+        11: {"month": "Листопад", "days": 30, "case": "Листопада"}, 12: {"month": "Грудень", "days": 31, "case": "Грудня"}
     }
 
     now: str = f"🗓️ Зараз"
@@ -348,6 +366,7 @@ class CalendarMenu(Controls, YesOrNo):
         args = all([year, month, day])
 
         if args:
+            print(year, month, day)
             today = datetime.datetime(year, month, day)
         else:
             today = datetime.datetime.now()

@@ -1,5 +1,5 @@
 from man_project_2023.telegram_bot.config import bot, Dispatcher
-from aiogram.types import Message
+from aiogram.types import Message, ContentTypes
 from aiogram.dispatcher.storage import FSMContext
 
 async def debug_handler(message: Message, state: FSMContext) -> None:
@@ -14,5 +14,5 @@ async def debug_handler(message: Message, state: FSMContext) -> None:
 def register_debug_handlers(dp: Dispatcher) -> None:
 
     dp.register_message_handler(
-        debug_handler, state=["*"]
+        debug_handler, content_types=ContentTypes.ANY, state=["*"]
     )

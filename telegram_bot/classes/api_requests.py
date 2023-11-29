@@ -2,7 +2,7 @@ import asyncio
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
 from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DataStructure
-from man_project_2023.telegram_bot.api.utils_schemas import AddressUtils
+from man_project_2023.telegram_bot.api.utils_schemas import LocationStructure
 
 
 class API:
