@@ -360,7 +360,7 @@ class CalendarMenu(Controls, YesOrNo):
 
     @classmethod
     def keyboard(cls, with_cancel: bool = False, with_save: bool = False, with_forward: bool = True,
-                 year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
+                 with_next: bool = False, year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=7)
 
         args = all([year, month, day])
@@ -440,6 +440,12 @@ class CalendarMenu(Controls, YesOrNo):
                                  callback_data=f"now{cls.date_callback}"
             )
         )
+
+        if with_next:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.next,
+                                     callback_data=cls.next_callback)
+            )
 
         if with_cancel:
             keyboard.add(

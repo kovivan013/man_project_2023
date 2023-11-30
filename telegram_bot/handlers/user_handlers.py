@@ -43,6 +43,14 @@ class Calendar(CalendarMenu):
                                                with_forward=with_forward)
         )
 
+    def reply_markup(self, with_next: bool = False):
+        with_forward = False
+        now = self.now()
+        if self.month < now.month or self.year < now.year:
+            with_forward = True
+        return CalendarMenu.keyboard(with_cancel=True, with_forward=with_forward, with_next=with_next,
+                                     year=self.year, month=self.month, day=1)
+
     async def move_forward(self, callback: CallbackQuery, state: FSMContext) -> None:
         with_forward = True
         if self.month >= self.now().month and self.year >= self.now().year:
@@ -66,15 +74,11 @@ class Calendar(CalendarMenu):
             self.month -= 1
         await self.edit(callback=callback)
 
-    async def to_date(self, timestamp: int):
-        date = datetime.datetime.fromtimestamp(timestamp)
-        return f"{date.day} {self.months[date.month]['case']}, {date.year} року"
-
     async def update_dates(self) -> None:
         now = datetime.datetime.now()
         self.year = now.year
         self.month = now.month
-        self.day = now.day
+        self.day = 1
 
 
 class StateStructure:
@@ -188,13 +192,15 @@ class ContextManager:
                    with_placeholder: bool = True):
         if current_state is not None:
             self.current_state = current_state
+        edited_message: Message = None
         if self.is_used:
 
             if not await self.states_equals():
                 await self.delete_context_messages()
 
             try:
-                media = await self.current_state.state_photo(image=image) if not file_id else file_id
+                media_id = utils.file_id(self.message)
+                media = await self.current_state.state_photo(image=image) if not file_id and image else file_id if file_id else media_id
                 edited_message = await self.message.edit_media(media=InputMediaPhoto(
                     media=media,
                     caption=text,
@@ -202,12 +208,13 @@ class ContextManager:
                 ),
                     reply_markup=DropdownMenu.placeholder_menu(
                         current_menu=await self.current_state.get_placeholder()
-                    ) if reply_markup is None else reply_markup)
-                return edited_message
+                    ) if reply_markup is None and with_placeholder else reply_markup)
+                self.message = edited_message
             except Exception as err:
                 print(err)
                 return None
         self.is_used = True
+        return edited_message
 
     async def appent_delete_list(self, message: Message):
         self.messages_to_delete.append(message.message_id)
@@ -599,7 +606,8 @@ class CreateGig:
         address = await LocationAPI.get_address(**location)
         city = await LocationStructure(location=address.data).get_city(with_type=True)
 
-        cls.data_for_send.add(location=location)
+        cls.data_for_send.add(location=location,
+                              address=address.data)
         await message.delete()
         edited_message = await contextManager.edit(text=f"Ви вказали: *{city}*\n\n"
                                                         f""
@@ -616,7 +624,7 @@ class CreateGig:
         await cls.select_date.update_dates()
         edited_message = await contextManager.edit(text=f"⌨️ *Оберіть дату, коли була знайдена річ:*",
                                                    image="dashboard_profile",
-                                                   reply_markup=CalendarMenu.keyboard(with_cancel=True, with_forward=False),
+                                                   reply_markup=cls.select_date.reply_markup(),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message,
                                      state=await cls.current_state.state_attr())
@@ -628,16 +636,35 @@ class CreateGig:
             timestamp = utils.now()
         else:
             timestamp = int(callback.data.split("_")[0])
-        date = await cls.select_date.to_date(timestamp=timestamp)
+        date = utils.date(timestamp=timestamp)
         edited_message = await contextManager.edit(text=f"Ви обрали *{date}*\n\n"
                                                         f""
                                                         f"👆 Натисніть *\"Далі\"* або оберіть *іншу дату*:",
-                                                   image="dashboard_profile",
-                                                   reply_markup=CalendarMenu.keyboard(with_cancel=True, with_forward=True),
+                                                   reply_markup=cls.select_date.reply_markup(with_next=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
         print(timestamp, datetime.datetime.fromtimestamp(timestamp))
         cls.data_for_send.add(date=timestamp)
+        print(cls.data_for_send.as_dict())
+
+    @classmethod
+    async def confirm_create(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await CreateGigStates.check_data.set()
+        address = await LocationStructure(location=cls.data_for_send.address).get_city(with_type=True)
+        date = utils.date(timestamp=cls.data_for_send.date)
+        edited_message = await contextManager.edit(text=f"🔍 *Перевірте інформацію:*\n\n"
+                                                        f""
+                                                        f"Назва: *{cls.data_for_send.name}*\n"
+                                                        f"Опис: *{cls.data_for_send.description}*\n"
+                                                        f"Дата: *{date}*\n"
+                                                        f"Місце: *{address}*\n\n"
+                                                        f""
+                                                        f"*Публікуємо оголошення?*",
+                                                   image="dashboard_profile",
+                                                   reply_markup=YesOrNo.keyboard(is_inline_keyboard=True),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message,
+                                     state=await cls.current_state.state_attr())
 
     @classmethod
     async def confirm_backward(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -734,6 +761,9 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         CreateGig.set_date, Text(endswith=CalendarMenu.date_callback), state=CreateGigStates.date
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_create, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.date
     )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.name

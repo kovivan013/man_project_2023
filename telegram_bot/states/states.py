@@ -114,6 +114,7 @@ class CreateGigStates(StatesGroup):
     photo = State()
     location = State()
     date = State()
+    check_data = State()
     backward = State()
 
     # @classmethod

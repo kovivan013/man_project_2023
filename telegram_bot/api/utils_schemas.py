@@ -9,8 +9,7 @@ class PayloadStructure:
             photo: str = None,
             tags: list = None,
             location: dict = None,
-            latitude: float = None,
-            longitude: float = None,
+            address: dict = None,
             date: int = None
             ):
         data: dict = locals()

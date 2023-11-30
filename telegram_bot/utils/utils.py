@@ -30,12 +30,12 @@ import datetime
 from dataclasses import dataclass
 from typing import Union
 from man_project_2023.telegram_bot.states.states import CurrentState, ProfileStates
-from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu
+from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu, CalendarMenu
 from aiogram.types import Message, InputMediaPhoto, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext
 
 
-class Utils:
+class Utils(CalendarMenu):
 
     def file_id(self, message: Message) -> str:
         return message.photo[-1].file_id
@@ -46,6 +46,10 @@ class Utils:
             "longitude": message.location.longitude
         }
         return data
+
+    def date(self, timestamp: int):
+        date = datetime.datetime.fromtimestamp(timestamp)
+        return f"{date.day} {self.months[date.month]['case']}, {date.year} року"
 
     def now(self, timestamp: bool = True):
         now = datetime.datetime.now()
