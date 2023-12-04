@@ -660,7 +660,7 @@ class CreateGig:
                                                         f"Місце: *{address}*\n\n"
                                                         f""
                                                         f"*Публікуємо оголошення?*",
-                                                   image="dashboard_profile",
+                                                   file_id=cls.data_for_send.photo,
                                                    reply_markup=YesOrNo.keyboard(is_inline_keyboard=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message,

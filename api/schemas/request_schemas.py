@@ -1,32 +1,56 @@
 from pydantic import BaseModel
 
-class BaseUser(BaseModel):
-    telegram_id: int
+from man_project_2023.api.utils.utils import Utils
 
-class UserCreate(BaseUser):
-    username: str
-    description: str
+class UserCreate:
 
-    def as_dict(self) -> dict:
-        return self.__dict__
+    class Request(BaseModel):
+        telegram_id: int
+        username: str
+        description: str
 
-class UpdateUser(BaseUser):
+    class Response(Utils):
+        def __init__(self):
+            self.telegram_id: int = 0
+            self.username: str = ""
+            self.user_data = self.UserData()
+            self.gigs = self.Gigs()
+
+        class UserData:
+            def __init__(self):
+                self.description: str = ""
+                self.badges: list = []
+
+        class Gigs:
+            def __init__(self):
+                self.active: dict = {}
+                self.completed: dict = {}
+                self.archived: dict = {}
+                self.pending: dict = {}
+
+
+class UpdateUser(BaseModel):
+    telegram_id: int = 0
     username: str = ""
     description: str = ""
 
 
 class GigCreate(BaseModel):
-    id: int
-    status: int # 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
-    name: str
-    description: str
-    tags: list
-    # image = None
-    location: dict # {"latitude": 0, "longitude": 0}
-    date: int # in unix timestamp  1700356582
 
-    def as_dict(self) -> dict:
-        return self.__dict__
+    id: str = 0
+    mode: int = ""
+    status: str = ""# 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
+    name: str = ""
+    description: str = ""
+    tags: list = []
+    location: dict = {} # {"latitude": 0, "longitude": 0}
+    date: int = 0 # in unix timestamp  1700356582
+
+    # def as_dict(self) -> dict:
+    #     return self.__dict__
+
+g = UserCreate().Response()
+print(g.as_dict())
 
 #   СТОЛБЕЦ ОГОЛОШЕННЯ
 # kovivan013
