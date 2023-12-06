@@ -1,56 +1,87 @@
 from pydantic import BaseModel
+from typing import List
 
 from man_project_2023.api.utils.utils import Utils
 
+class BaseUser(Utils):
+    def __init__(self, data: dict = None):
+        self.telegram_id: int = 0
+        self.username: str = ""
+        self.to_class(**data)
+        self.user_data = self.UserData(data=data)
+        self.gigs = self.Gigs(data=data)
+
+    class UserData(Utils):
+        def __init__(self, data: dict = None):
+            self.description: str = ""
+            self.badges: list = []
+            self.to_class(**data)
+
+    class Gigs(Utils):
+        def __init__(self, data: dict = None):
+            self.active: dict = {}
+            self.completed: dict = {}
+            self.archived: dict = {}
+            self.pending: dict = {}
+            self.to_class(**data)
+
+class BaseGig(Utils):
+    def __init__(self, data: dict = None):
+        self.telegram_id: int = 0
+        self.id: str = ""
+        self.mode: int = 0
+        self.status: int = 0 # 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
+        self.to_class(**data)
+        self.data = self.Data(data=data)
+
+    class Data(Utils):
+        def __init__(self, data: dict = None):
+            self.name: str = ""
+            self.description: str = ""
+            self.address: dict = {}
+            self.date: int = 0
+            self.tags: list = 0
+            self.to_class(**data)
+            self.location = self.Location(data=data)
+
+        class Location(Utils):
+            def __init__(self, data: dict = None):
+                self.latitude: float = 0.0
+                self.longitude: float = 0.0
+                self.to_class(**data)
+
 class UserCreate:
 
-    class Request(BaseModel):
+    class Request(BaseModel, Utils):
         telegram_id: int
         username: str
         description: str
 
-    class Response(Utils):
-        def __init__(self):
-            self.telegram_id: int = 0
-            self.username: str = ""
-            self.user_data = self.UserData()
-            self.gigs = self.Gigs()
-
-        class UserData:
-            def __init__(self):
-                self.description: str = ""
-                self.badges: list = []
-
-        class Gigs:
-            def __init__(self):
-                self.active: dict = {}
-                self.completed: dict = {}
-                self.archived: dict = {}
-                self.pending: dict = {}
-
 
 class UpdateUser(BaseModel):
-    telegram_id: int = 0
-    username: str = ""
-    description: str = ""
+
+    class Description(BaseModel, Utils):
+        telegram_id: int = 0
+        description: str = ""
 
 
 class GigCreate(BaseModel):
 
-    id: str = 0
-    mode: int = ""
-    status: str = ""# 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
-    name: str = ""
-    description: str = ""
-    tags: list = []
-    location: dict = {} # {"latitude": 0, "longitude": 0}
-    date: int = 0 # in unix timestamp  1700356582
+    class Request(BaseModel, Utils):
+        telegram_id: int
+        mode: int
+        name: str
+        description: str
+        tags: List[str]
+        location: dict  # {"latitude": 0, "longitude": 0}
+        address: dict
+        date: int # in unix timestamp  1700356582
 
-    # def as_dict(self) -> dict:
-    #     return self.__dict__
 
-g = UserCreate().Response()
-print(g.as_dict())
+# g = UserCreate().Response()
+# data = {'telegram_id': 3453453141, 'username': 'xgfd', 'user_data': {'description': 'sgfsgsg', 'badges': []}, 'gigs': {'active': {}, 'completed': {}, 'archived': {}, 'pending': {}}}
+# g.as_class(data=data)
+# print(g.as_dict())
 
 #   СТОЛБЕЦ ОГОЛОШЕННЯ
 # kovivan013

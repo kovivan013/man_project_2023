@@ -605,7 +605,6 @@ class CreateGig:
         location = utils.location(message=message)
         address = await LocationAPI.get_address(**location)
         city = await LocationStructure(location=address.data).get_city(with_type=True)
-
         cls.data_for_send.add(location=location,
                               address=address.data)
         await message.delete()

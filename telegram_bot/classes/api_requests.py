@@ -2,6 +2,7 @@ import asyncio
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
 from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DataStructure
+from man_project_2023.api.schemas.request_schemas import GigCreate, UserCreate
 from man_project_2023.telegram_bot.api.utils_schemas import LocationStructure
 
 
@@ -40,14 +41,23 @@ class UserAPI(API):
     __prefix = lambda endpoint: "/user" + endpoint
 
     @classmethod
-    async def create_user(cls, telegram_id: int, username: str):
+    async def create_user(cls, telegram_id: int, username: str,
+                          description: str):
         endpoint: str = cls.__prefix("/create_user")
-        data: dict = {
-            "telegram_id": telegram_id,
-            "username": username,
-            "description": ""
-        }
+        data: dict = UserCreate().Request(**locals()).as_dict()
+        print(data)
 
+        return await cls._post_request(endpoint=endpoint,
+                                       data=data)
+
+    @classmethod
+    async def create_gig(cls, telegram_id: int,
+                         mode: int, name: str,
+                         description: str, location: dict,
+                         address: dict, date: int, tags: list):
+        endpoint: str = cls.__prefix("/create_gig")
+        data: dict = GigCreate().Request(**locals()).as_dict()
+        print(data)
         return await cls._post_request(endpoint=endpoint,
                                        data=data)
 
@@ -100,12 +110,20 @@ class LocationAPI(API):
                                       base_request=False)
 
 
-# import asyncio
-#
-# resp = asyncio.run(LocationAPI.get_address(latitude=49.00523,
-#                                            longitude=31.39220))
-#
-# print(resp._as_dict())
-# a = AddressUtils(location=resp.data)
-# print(asyncio.run(a.get_city()))
+import asyncio
+
+resp = asyncio.run(UserAPI.create_gig(telegram_id=1,
+                                      mode=1,
+                                      name="dfgeg",
+                                      description="dsfhg",
+                                      location={"latitude": 1.23476,
+                                                "longitude": 1.45873},
+                                      address={"l": 1},
+                                      date=1701900690,
+                                      tags=[]))
+print(resp)
+resp = asyncio.run(UserAPI.create_user(telegram_id=12341122,
+                                       username="sjhg",
+                                       description=""))
+print(resp)
 
