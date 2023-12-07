@@ -3,52 +3,89 @@ from typing import List
 
 from man_project_2023.api.utils.utils import Utils
 
-class BaseUser(Utils):
-    def __init__(self, data: dict = None):
-        self.telegram_id: int = 0
-        self.username: str = ""
-        self.to_class(**data)
-        self.user_data = self.UserData(data=data)
-        self.gigs = self.Gigs(data=data)
+# class BaseUser(Utils):
+#     def __init__(self, data: dict = None):
+#         self.telegram_id: int = 0
+#         self.username: str = ""
+#         self.to_class(**data)
+#         self.user_data = self.UserData(data=data)
+#         self.gigs = self.Gigs(data=data)
+#
+#     class UserData(Utils):
+#         def __init__(self, data: dict = None):
+#             self.description: str = ""
+#             self.badges: list = []
+#             self.to_class(**data)
+#
+#     class Gigs(Utils):
+#         def __init__(self, data: dict = None):
+#             self.active: dict = {}
+#             self.completed: dict = {}
+#             self.archived: dict = {}
+#             self.pending: dict = {}
+#             self.to_class(**data)
 
-    class UserData(Utils):
-        def __init__(self, data: dict = None):
-            self.description: str = ""
-            self.badges: list = []
-            self.to_class(**data)
+class UserData(BaseModel):
+    description: str = ""
+    badges: list = []
 
-    class Gigs(Utils):
-        def __init__(self, data: dict = None):
-            self.active: dict = {}
-            self.completed: dict = {}
-            self.archived: dict = {}
-            self.pending: dict = {}
-            self.to_class(**data)
+class Gigs(BaseModel):
+    active: dict = {}
+    completed: dict = {}
+    archived: dict = {}
+    pending: dict = {}
 
-class BaseGig(Utils):
-    def __init__(self, data: dict = None):
-        self.telegram_id: int = 0
-        self.id: str = ""
-        self.mode: int = 0
-        self.status: int = 0 # 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
-        self.to_class(**data)
-        self.data = self.Data(data=data)
+class BaseUser(BaseModel):
+    telegram_id: int = 0
+    username: str = ""
+    user_data: UserData = UserData()
+    gigs: Gigs = Gigs()
 
-    class Data(Utils):
-        def __init__(self, data: dict = None):
-            self.name: str = ""
-            self.description: str = ""
-            self.address: dict = {}
-            self.date: int = 0
-            self.tags: list = 0
-            self.to_class(**data)
-            self.location = self.Location(data=data)
+# class BaseGig(Utils):
+#     def __init__(self, data: dict = None):
+#         self.telegram_id: int = 0
+#         self.id: str = ""
+#         self.mode: int = 0
+#         self.status: int = 0 # 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
+#         self.to_class(**data)
+#         self.data = self.Data(data=data)
+#
+#     class Data(Utils):
+#         def __init__(self, data: dict = None):
+#             self.name: str = ""
+#             self.description: str = ""
+#             self.address: dict = {}
+#             self.date: int = 0
+#             self.tags: list = 0
+#             self.to_class(**data)
+#             self.location = self.Location(data=data)
+#
+#         class Location(Utils):
+#             def __init__(self, data: dict = None):
+#                 self.latitude: float = 0.0
+#                 self.longitude: float = 0.0
+#                 self.to_class(**data["location"])
 
-        class Location(Utils):
-            def __init__(self, data: dict = None):
-                self.latitude: float = 0.0
-                self.longitude: float = 0.0
-                self.to_class(**data)
+class Location(BaseModel):
+    latitude: float = 0.0
+    longitude: float = 0.0
+
+class Data(BaseModel):
+    name: str = ""
+    description: str = ""
+    address: dict = {}
+    date: int = 0
+    tags: list = []
+    location: Location = Location()
+
+class BaseGig(BaseModel):
+    telegram_id: int = 0
+    id: str = ""
+    mode: int = 0
+    status: int = 0
+    data: Data = Data()
+
+
 
 class UserCreate:
 

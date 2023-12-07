@@ -3,7 +3,7 @@ import uuid
 class Utils:
 
     def get_uuid(self):
-        return uuid.uuid4().__str__()
+        return str(uuid.uuid4())
 
     def as_dict(self, data: dict = None):
         if data is None:
@@ -18,10 +18,17 @@ class Utils:
         return data
 
     def to_class(self, **kwargs):
+        # print("new cls")
         if kwargs:
             for i, v in kwargs.items():
+                # print(i, v)
                 if hasattr(self, i):
+                    if isinstance(attribute := getattr(self, i), dict):
+                        # pass
+                        attribute.update({i: v})
+                        # print(attribute, "ATTR", i, v)
                     self.__setattr__(i, v)
+                    # print("\n", i, type(getattr(self, i)), "\n", getattr(self, i), "\n", )
 
     def as_class(self, data: dict, path: str = "", use_strict: bool = False):
         for i, v in data.items():

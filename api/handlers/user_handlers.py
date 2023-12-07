@@ -1,4 +1,5 @@
 import datetime
+import json
 
 from fastapi import APIRouter, Depends, Response, Request
 from starlette import status
@@ -17,42 +18,38 @@ user_router = APIRouter()
 utils = Utils()
 
 @user_router.post("/create_user")
-def create_user(request_data: UserCreate.Request, response: Response, request: Request, db: Session = Depends(get_db)):
+def create_user(request_data: BaseUser, response: Response, request: Request, db: Session = Depends(get_db)):
     result = DataStructure()
     user_exists = db.query(User).filter(User.telegram_id == request_data.telegram_id).first() is not None
     if user_exists:
         raise exceptions.ItemExistsException
 
-    data = BaseUser(data=request_data.as_dict())
+    data = BaseUser().model_validate(request_data)
 
     result.status = status.HTTP_201_CREATED
     result._success()
     result.message = "test"
-    result.data = data.as_dict()
+    result.data = data.model_dump()
 
     return PostRequest(db=db,
                        response=response,
-                       data=data.as_dict(),
+                       data=result.data,
                        result=result).send_request()
 
 @user_router.post("/create_gig")
-def create_gig(request_data: GigCreate.Request, response: Response, request: Request, db: Session = Depends(get_db)):
+def create_gig(request_data: BaseGig, response: Response, request: Request, db: Session = Depends(get_db)):
     result = DataStructure()
     user = db.query(User).filter(User.telegram_id == request_data.telegram_id).first()
     if user is None:
         raise exceptions.ItemNotFoundException
-    user_instance = BaseUser(data=user.as_dict())
-    print(user_instance.as_dict())
-    data = BaseGig(data=request_data.as_dict())
-
+    user_instance = BaseUser().model_validate(user.as_dict())
+    data = BaseGig().model_validate(request_data)
     data.id = utils.get_uuid()
+    user_instance.gigs.active.update({data.id: data.model_dump()})
+    user.gigs = user_instance.gigs.model_dump()
 
-    user_instance.gigs.active[data.id] = data.id=data.as_dict()
-    user.gigs = user_instance.gigs.as_dict()
-    print(user.gigs)
     db.commit()
-
-    result.data = data.as_dict()
+    result.data = data.model_dump()
     result._success()
 
     return result
