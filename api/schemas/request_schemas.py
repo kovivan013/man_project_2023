@@ -25,52 +25,41 @@ from man_project_2023.api.utils.utils import Utils
 #             self.pending: dict = {}
 #             self.to_class(**data)
 
+
+class Description(BaseModel):
+    description: str = ""
+
+
+class Badges(BaseModel):
+    badges: list = []
+
+
 class UserData(BaseModel):
     description: str = ""
     badges: list = []
 
-class Gigs(BaseModel):
+
+class UserGigs(BaseModel):
     active: dict = {}
     completed: dict = {}
     archived: dict = {}
     pending: dict = {}
 
+
 class BaseUser(BaseModel):
     telegram_id: int = 0
     username: str = ""
+    mode: int = 0
     user_data: UserData = UserData()
-    gigs: Gigs = Gigs()
+    gigs: UserGigs = UserGigs()
 
-# class BaseGig(Utils):
-#     def __init__(self, data: dict = None):
-#         self.telegram_id: int = 0
-#         self.id: str = ""
-#         self.mode: int = 0
-#         self.status: int = 0 # 0 completed 1 active 2 archived JSONB indexes (при создании или изменении)(создание - автоматически 1 индекс)
-#         self.to_class(**data)
-#         self.data = self.Data(data=data)
-#
-#     class Data(Utils):
-#         def __init__(self, data: dict = None):
-#             self.name: str = ""
-#             self.description: str = ""
-#             self.address: dict = {}
-#             self.date: int = 0
-#             self.tags: list = 0
-#             self.to_class(**data)
-#             self.location = self.Location(data=data)
-#
-#         class Location(Utils):
-#             def __init__(self, data: dict = None):
-#                 self.latitude: float = 0.0
-#                 self.longitude: float = 0.0
-#                 self.to_class(**data["location"])
 
 class Location(BaseModel):
     latitude: float = 0.0
     longitude: float = 0.0
 
-class Data(BaseModel):
+
+class GigData(BaseModel):
     name: str = ""
     description: str = ""
     address: dict = {}
@@ -78,41 +67,30 @@ class Data(BaseModel):
     tags: list = []
     location: Location = Location()
 
+
 class BaseGig(BaseModel):
     telegram_id: int = 0
     id: str = ""
     mode: int = 0
     status: int = 0
-    data: Data = Data()
+    data: GigData = GigData()
 
 
-
-class UserCreate:
-
-    class Request(BaseModel, Utils):
-        telegram_id: int
-        username: str
-        description: str
-
-
-class UpdateUser(BaseModel):
-
-    class Description(BaseModel, Utils):
-        telegram_id: int = 0
-        description: str = ""
+class UserCreate(BaseModel):
+    telegram_id: int
+    username: str
+    user_data: Description = Description()
 
 
 class GigCreate(BaseModel):
+    telegram_id: int
+    mode: int
+    data: GigData = GigData()
 
-    class Request(BaseModel, Utils):
-        telegram_id: int
-        mode: int
-        name: str
-        description: str
-        tags: List[str]
-        location: dict  # {"latitude": 0, "longitude": 0}
-        address: dict
-        date: int # in unix timestamp  1700356582
+
+class UpdateDescription(BaseModel):
+    telegram_id: int = 0
+    user_data: Description = Description()
 
 
 # g = UserCreate().Response()

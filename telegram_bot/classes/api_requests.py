@@ -2,7 +2,7 @@ import asyncio
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
 from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DataStructure
-from man_project_2023.api.schemas.request_schemas import GigCreate, UserCreate
+from man_project_2023.api.schemas.request_schemas import GigCreate, UserCreate, BaseUser, BaseGig
 from man_project_2023.telegram_bot.api.utils_schemas import LocationStructure
 
 
@@ -42,7 +42,7 @@ class UserAPI(API):
 
     @classmethod
     async def create_user(cls, telegram_id: int, username: str,
-                          description: str):
+                          description: str) -> BaseUser:
         endpoint: str = cls.__prefix("/create_user")
         data: dict = UserCreate().Request(**locals()).as_dict()
         print(data)
@@ -54,10 +54,9 @@ class UserAPI(API):
     async def create_gig(cls, telegram_id: int,
                          mode: int, name: str,
                          description: str, location: dict,
-                         address: dict, date: int, tags: list):
+                         address: dict, date: int, tags: list) -> BaseGig:
         endpoint: str = cls.__prefix("/create_gig")
         data: dict = GigCreate().Request(**locals()).as_dict()
-        print(data)
         return await cls._post_request(endpoint=endpoint,
                                        data=data)
 
