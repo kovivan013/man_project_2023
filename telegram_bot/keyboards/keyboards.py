@@ -129,12 +129,18 @@ class Controls:
     backward: str = f"◀ Назад"
     close: str = f"Зачинити ✖"
 
+    plus: str = f"➕"
+    minus: str = f"➖"
+
     short_forward: str = f"▶"
     short_backward: str = f"◀"
+
 
     forward_callback: str = f"forward_control_callback"
     backward_callback: str = f"backward_control_callback"
     close_callback: str = f"close_control_callback"
+    plus_callback: str = f"plus_callback"
+    minus_callback: str = f"minus_callback"
 
 
 @dataclass(frozen=True)
@@ -202,6 +208,91 @@ class DropdownMenu:
                 )
 
         return {"inline_keyboard": buttons}
+
+class ListMenu(YesOrNo, Controls):
+    """
+    Вызывать если нужно ввести список элементов, например список тегов
+    """
+    @classmethod
+    def keyboard(cls, elements_list: list = [], callback: str = "",
+                 with_cancel: bool = True, with_skip: bool = False, with_next: bool = False) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=4)
+        if elements_list:
+            for i, v in enumerate(elements_list, start=0):
+                if not i%3:
+                    keyboard.add(
+                        InlineKeyboardButton(text=v,
+                                             callback_data=f"{v}_list_menu")
+                    )
+                else:
+                    keyboard.insert(
+                        InlineKeyboardButton(text=v,
+                                             callback_data=f"{v}_list_menu")
+                    )
+                if callback and callback[:callback.rindex("_list_menu")] == v:
+                    keyboard.insert(
+                        InlineKeyboardButton(text=cls.minus,
+                                             callback_data=f"{v}_remove_list_menu")
+                    )
+
+        if with_cancel:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.cancel,
+                                     callback_data=cls.cancel_callback)
+            )
+            if with_skip:
+                keyboard.insert(
+                    InlineKeyboardButton(text=cls.skip,
+                                         callback_data=cls.skip_callback)
+                )
+
+            if with_next:
+                keyboard.insert(
+                    InlineKeyboardButton(text=cls.next,
+                                         callback_data=cls.next_callback)
+                )
+
+        return keyboard
+
+
+class MainMenu:
+    change_mode: str = "Режим"
+    profile: str = f"👤 Профіль"
+    settings: str = f"⚙️ Налаштування"
+    support: str = f"🆘 Підтримка"
+    info_about: str = f"ℹ Про проект"
+
+    change_mode_callback: str = f"change_mode_callback"
+    profile_callback: str = f"profile_callback"
+    settings_callback: str = f"settings_callback"
+    support_callback: str = f"support_callback"
+    info_about_callback: str = f"info_about_callback"
+
+    @classmethod
+    def keyboard(cls, mode: int = 0) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        modes: dict = {
+            0: "🔦",
+            1: "🔍"
+        }
+
+        keyboard.add(
+            InlineKeyboardButton(text=f"{cls.change_mode} {modes[mode]}",
+                                 callback_data=cls.change_mode_callback)
+        )
+        keyboard.add(
+            InlineKeyboardButton(text=cls.profile,
+                                 callback_data=cls.change_mode_callback),
+            InlineKeyboardButton(text=cls.settings,
+                                 callback_data=cls.settings_callback),
+            InlineKeyboardButton(text=cls.support,
+                                 callback_data=cls.support_callback),
+            InlineKeyboardButton(text=cls.info_about,
+                                 callback_data=cls.info_about_callback)
+        )
+
+        return keyboard
 
 # TODO: Нужно разделить на 2 класса потерявшего и нашедшего, буду смотреть по ситуации
 @dataclass(frozen=True)

@@ -1,25 +1,32 @@
 from pydantic import BaseModel
 
-class PayloadStructure:
-    def add(self,
-            telegram_id: int = None,
-            username: str = None,
-            name: str = None,
-            description: str = None,
-            photo: str = None,
-            tags: list = None,
-            location: dict = None,
-            address: dict = None,
-            date: int = None
-            ):
-        data: dict = locals()
-        data.pop("self")
-        for i, v in data.items():
-            if v is not None:
-                setattr(self, i, v)
+# class PayloadStructure:
+#
+#     def add(self,
+#             telegram_id: int = 0,
+#             username: str = "",
+#             name: str = "",
+#             description: str = "",
+#             photo: str = "",
+#             tags: list = [],
+#             location: dict = {},
+#             address: dict = {},
+#             date: int = 0
+#             ):
+#         data: dict = locals()
+#         data.pop("self")
+#         for i, v in data.items():
+#             if v:
+#                 setattr(self, i, v)
+#
+#         print(self.as_dict())
+#
+#     def as_dict(self) -> dict:
+#         return self.__dict__
 
-    def as_dict(self) -> dict:
-        return self.__dict__
+class StateProxy(BaseModel):
+    file_id: str = ""
+
 
 class DataStructure(BaseModel):
     status: int = 200
@@ -27,7 +34,7 @@ class DataStructure(BaseModel):
     message: str = ""
     data: dict = {}
 
-    def _as_dict(self) -> dict:
+    def as_dict(self) -> dict:
         return self.__dict__
 
 class ResponseStructure:
@@ -35,7 +42,15 @@ class ResponseStructure:
         self.status = status
         self.data = data
 
-    def _as_dict(self) -> dict:
+    def as_dict(self) -> dict:
+        return self.__dict__
+
+class StateStructure:
+    def __init__(self, caption: str, media):
+        self.caption = caption
+        self.media = media
+
+    def as_dict(self) -> dict:
         return self.__dict__
 
 class LocationStructure:

@@ -41,39 +41,30 @@ class UserAPI(API):
     __prefix = lambda endpoint: "/user" + endpoint
 
     @classmethod
-    async def create_user(cls, telegram_id: int, username: str,
-                          description: str) -> BaseUser:
+    async def create_user(cls, data: dict) -> 'DataStructure':
         endpoint: str = cls.__prefix("/create_user")
-        data: dict = UserCreate().Request(**locals()).as_dict()
-        print(data)
-
         return await cls._post_request(endpoint=endpoint,
                                        data=data)
 
     @classmethod
-    async def create_gig(cls, telegram_id: int,
-                         mode: int, name: str,
-                         description: str, location: dict,
-                         address: dict, date: int, tags: list) -> BaseGig:
+    async def create_gig(cls, data: dict) -> 'DataStructure':
         endpoint: str = cls.__prefix("/create_gig")
-        data: dict = GigCreate().Request(**locals()).as_dict()
         return await cls._post_request(endpoint=endpoint,
                                        data=data)
 
     @classmethod
-    async def get_user_data(cls, telegram_id: int) -> DataStructure:
-        endpoint: str = cls.__prefix(f"/{telegram_id}/user_data")
+    async def get_user(cls, telegram_id: int) -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}")
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod
-    async def update_description(cls, telegram_id: int, description: str):
+    async def get_user_data(cls, telegram_id: int) -> 'DataStructure':
+        user = await cls.get_user(telegram_id=telegram_id)
+        return user.data["user_data"]
+
+    @classmethod
+    async def update_description(cls, data: dict) -> 'DataStructure':
         endpoint: str = cls.__prefix("/update_description")
-
-        data: dict = {
-            "telegram_id": telegram_id,
-            "description": description
-        }
-
         return await cls._patch_request(endpoint=endpoint,
                                         data=data)
 
@@ -109,20 +100,22 @@ class LocationAPI(API):
                                       base_request=False)
 
 
-import asyncio
-
-resp = asyncio.run(UserAPI.create_gig(telegram_id=1,
-                                      mode=1,
-                                      name="dfgeg",
-                                      description="dsfhg",
-                                      location={"latitude": 1.23476,
-                                                "longitude": 1.45873},
-                                      address={"l": 1},
-                                      date=1701900690,
-                                      tags=[]))
-print(resp)
-resp = asyncio.run(UserAPI.create_user(telegram_id=12341122,
-                                       username="sjhg",
-                                       description=""))
-print(resp)
+# import asyncio
+# r = asyncio.run(UserAPI.get_user(telegram_id=1125858430))
+# print(r.as_dict())
+#
+# resp = asyncio.run(UserAPI.create_gig(telegram_id=1,
+#                                       mode=1,
+#                                       name="dfgeg",
+#                                       description="dsfhg",
+#                                       location={"latitude": 1.23476,
+#                                                 "longitude": 1.45873},
+#                                       address={"l": 1},
+#                                       date=1701900690,
+#                                       tags=[]))
+# print(resp)
+# resp = asyncio.run(UserAPI.create_user(telegram_id=12341122,
+#                                        username="sjhg",
+#                                        description=""))
+# print(resp)
 

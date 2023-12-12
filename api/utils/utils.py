@@ -1,4 +1,5 @@
 import uuid
+from pydantic import BaseModel
 
 class Utils:
 
@@ -17,50 +18,7 @@ class Utils:
 
         return data
 
-    def to_class(self, **kwargs):
-        # print("new cls")
-        if kwargs:
-            for i, v in kwargs.items():
-                # print(i, v)
-                if hasattr(self, i):
-                    if isinstance(attribute := getattr(self, i), dict):
-                        # pass
-                        attribute.update({i: v})
-                        # print(attribute, "ATTR", i, v)
-                    self.__setattr__(i, v)
-                    # print("\n", i, type(getattr(self, i)), "\n", getattr(self, i), "\n", )
 
-    def as_class(self, data: dict, path: str = "", use_strict: bool = False):
-        for i, v in data.items():
-            if isinstance(v, dict) and v:
-                path += f" {i}" if path else f"{i}"
-                self.as_class(data=v,
-                              path=path)
-                continue
-            keys = path.split()
-            name = i
-            value = v
-
-            if keys:
-                attribute = getattr(self, keys[0])
-                if len(keys) > 1:
-                    for i in keys[1:]:
-                        attribute = getattr(self, i)
-
-                # setattr(attribute, name, value)
-                try:
-                    getattr(attribute, name)
-                    setattr(attribute, name, value)
-                except:
-                    if not use_strict:
-                        setattr(self, name, value)
-            else:
-                try:
-                    getattr(self, name)
-                    setattr(self, name, value)
-                except:
-                    if not use_strict:
-                        setattr(self, name, value)
 
 
 # class BaseUser(Utils):

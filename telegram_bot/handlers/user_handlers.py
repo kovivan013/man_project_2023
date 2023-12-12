@@ -1,281 +1,64 @@
 import datetime
 
-import aiogram.types
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
-from aiogram.types.input_media import InputMediaPhoto, InputFile
 from aiogram.types.message import ContentTypes
-
 from aiogram.dispatcher.storage import FSMContext
-from man_project_2023.telegram_bot.api.utils_schemas import PayloadStructure
-from man_project_2023.telegram_bot.states.states import (
-ProfileStates, UpdateDescriptionStates, UpdateUsernameStates, CreateGigStates, CurrentState, State
-)
 from aiogram.dispatcher.filters import Text
-from man_project_2023.telegram_bot.utils.utils import  Utils
-from man_project_2023.photos_database.handlers import PhotosDB
+
+from man_project_2023.telegram_bot.config import bot, Dispatcher
+from man_project_2023.telegram_bot.utils.utils import Utils
+from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
+from man_project_2023.telegram_bot.states.states import (
+    ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
+    CreateGigStates, CurrentState, State
+)
+from man_project_2023.telegram_bot.classes.utils_classes import (
+    Calendar, CurrentState, ContextManager, ListMenuManager,
+    BranchManager
+)
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu
+    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu
 )
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
-from man_project_2023.telegram_bot.config import bot, Dispatcher
 
+from man_project_2023.photos_database.handlers import PhotosDB
+from man_project_2023.api.schemas.request_schemas import (
+    GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser
+)
 
 utils = Utils()
-
-
-class Calendar(CalendarMenu):
-
-    def __init__(self):
-        self.year: int = 0
-        self.month: int = 0
-        self.day: int = 0
-
-    def now(self):
-        return datetime.datetime.now()
-
-    async def edit(self, callback: CallbackQuery, with_forward: bool = True):
-        await callback.message.edit_reply_markup(
-            reply_markup=CalendarMenu.keyboard(year=self.year,
-                                               month=self.month,
-                                               day=self.day,
-                                               with_cancel=True,
-                                               with_forward=with_forward)
-        )
-
-    def reply_markup(self, with_next: bool = False):
-        with_forward = False
-        now = self.now()
-        if self.month < now.month or self.year < now.year:
-            with_forward = True
-        return CalendarMenu.keyboard(with_cancel=True, with_forward=with_forward, with_next=with_next,
-                                     year=self.year, month=self.month, day=1)
-
-    async def move_forward(self, callback: CallbackQuery, state: FSMContext) -> None:
-        with_forward = True
-        if self.month >= self.now().month and self.year >= self.now().year:
-            return
-        if self.month + 1 >= self.now().month and self.year >= self.now().year:
-            with_forward = False
-
-        if self.month == 12:
-            self.month = 1
-            self.year += 1
-        else:
-            self.month += 1
-        await self.edit(callback=callback,
-                        with_forward=with_forward)
-
-    async def move_bacward(self, callback: CallbackQuery, state: FSMContext) -> None:
-        if self.month == 1:
-            self.month = 12
-            self.year -= 1
-        else:
-            self.month -= 1
-        await self.edit(callback=callback)
-
-    async def update_dates(self) -> None:
-        now = datetime.datetime.now()
-        self.year = now.year
-        self.month = now.month
-        self.day = 1
-
-
-class StateStructure:
-    def __init__(self, caption: str, media):
-        self.caption = caption
-        self.media = media
-
-    def _as_dict(self) -> dict:
-        return self.__dict__
-
-class BranchManager:
-
-    def __init__(self):
-        self.current_state: CurrentState = None
-        self.state: State = None
-        self.default_message: dict = {}
-        self.message: Message = None
-        self.data: dict = {}
-
-    async def state_data(self) -> 'StateStructure':
-        state_name = await self.current_state.get_name()
-        state_data = self.data[state_name]
-        return state_data
-
-    async def set_data(self, state_name: State,
-                       caption: str, image_name: str):
-        self.data.update({state_name._state: StateStructure(caption=caption,
-                                                            media=image_name)})
-
-    async def set(self, message: Message, current_state: CurrentState = None, state = None):
-        if current_state is not None:
-            self.current_state = current_state
-
-        if message is not None:
-            self.default_message = {
-                "media": {
-                    "media": message.photo[0].file_id,
-                    "caption": message.caption,
-                    "parse_mode": "Markdown"
-                },
-                "reply_markup": message.reply_markup
-            }
-            self.message = message
-        if state is not None:
-            self.state = state
-
-    async def edit(self):
-        data = await self.state_data()
-        await self.message.edit_media(media=InputMediaPhoto(
-            media=await self.current_state.state_photo(data.media),
-            caption=data.caption,
-            parse_mode="Markdown"
-        ),
-        reply_markup=YesOrNo.keyboard(is_inline_keyboard=True))
-
-    async def reset_message(self, *args, **kwargs):
-        await self.state.set()
-        await self.message.edit_media(media=InputMediaPhoto(
-            **self.default_message["media"]
-        ),
-        reply_markup=self.default_message["reply_markup"])
-
-
-class ContextManager:
-
-    def __init__(self):
-        self.current_state: CurrentState = None
-        self.message: Message = None
-        self.messages_to_delete: list[Message] = []
-        self.previous_state: str = None
-        self.is_used = False
-
-    async def send(self, current_state: CurrentState,
-                   required_state: State, image: str):
-        self.current_state = current_state
-        photo = await self.current_state.state_photo(image=image)
-        self.message = await bot.send_photo(chat_id=self.current_state.state.chat,
-                                            photo=photo,
-                                            reply_markup=DropdownMenu.placeholder_menu(
-                                               current_menu=await self.current_state.get_placeholder(
-                                                   required_state=required_state
-                                               )
-                                           ))
-
-
-    async def select(self, current_state: CurrentState = None,
-                     delete_messages: bool = False,
-                     reply_markup: InlineKeyboardMarkup = None):
-        if current_state is not None:
-            self.current_state = current_state
-        if delete_messages:
-            await self.delete_context_messages()
-
-        await self.set_previous_state()
-        image = open('img/test35459468345687456.png', 'rb')
-        await self.message.edit_media(media=InputMediaPhoto(
-            media=image,
-            caption=f"💻 *Оберіть необхідне меню:*",
-            parse_mode="Markdown"
-        ),
-            reply_markup=DropdownMenu.menu_keyboard(
-                buttons=await self.current_state.get_buttons(reply_markup=reply_markup)
-        ))
-
-
-    async def edit(self, current_state: CurrentState = None,
-                   text: str = None,
-                   image: str = None,
-                   file_id: str = None,
-                   reply_markup: InlineKeyboardMarkup = None,
-                   with_placeholder: bool = True):
-        if current_state is not None:
-            self.current_state = current_state
-        edited_message: Message = None
-        if self.is_used:
-
-            if not await self.states_equals():
-                await self.delete_context_messages()
-
-            try:
-                media_id = utils.file_id(self.message)
-                media = await self.current_state.state_photo(image=image) if not file_id and image else file_id if file_id else media_id
-                edited_message = await self.message.edit_media(media=InputMediaPhoto(
-                    media=media,
-                    caption=text,
-                    parse_mode="Markdown"
-                ),
-                    reply_markup=DropdownMenu.placeholder_menu(
-                        current_menu=await self.current_state.get_placeholder()
-                    ) if reply_markup is None and with_placeholder else reply_markup)
-                self.message = edited_message
-            except Exception as err:
-                print(err)
-                return None
-        self.is_used = True
-        return edited_message
-
-    async def appent_delete_list(self, message: Message):
-        self.messages_to_delete.append(message.message_id)
-
-
-    async def delete_context_messages(self):
-        for message_id in self.messages_to_delete:
-            await bot.delete_message(chat_id=self.current_state.state.chat,
-                                     message_id=message_id)
-        self.messages_to_delete.clear()
-
-
-    async def set_previous_state(self):
-        self.previous_state = await self.current_state.get_name()
-
-
-    async def states_equals(self) -> bool:
-        return self.previous_state == await self.current_state.get_name()
-
-
-    async def delete(self):
-        await self.message.delete()
-        self.reset_data()
-
-
-    def reset_data(self):
-        self.is_used = False
-
-
 
 class RegisterMH:
     pass
 
-class FinderMH: # Тот кто ищет (НАШЕЛ)
-
-    @classmethod
-    async def cls_menu(cls, message: Message) -> None:
-        photo = open("img/dtpanel1.png", "rb")
-        await bot.send_photo(chat_id=message.from_user.id,
-                             photo=photo,
-                             caption="Знайдено речей за Вересень: *16*",
-                             parse_mode="Markdown",
-                             reply_markup=Filters.dashboard_filter())
-        await bot.send_message(chat_id=message.from_user.id,
-                               text=f"Немає доступних оголошень",
-                               reply_markup=Navigation.finder_keyboard())
-
-class SeekerMH: # Тот кто ищет (ПОТЕРЯЛ)
-
-    @classmethod
-    async def cls_menu(cls, message: Message) -> None:
-        photo = open("img/marketplace_png.png", "rb")
-        await bot.send_photo(chat_id=message.from_user.id,
-                             caption=f"💡 Що шукаєш сьогодні?",
-                             photo=photo,
-                             reply_markup=MainMenu.seeker_keyboard())
+# class FinderMH: # Тот кто ищет (НАШЕЛ)
+#
+#     @classmethod
+#     async def cls_menu(cls, message: Message) -> None:
+#         photo = open("img/dtpanel1.png", "rb")
+#         await bot.send_photo(chat_id=message.from_user.id,
+#                              photo=photo,
+#                              caption="Знайдено речей за Вересень: *16*",
+#                              parse_mode="Markdown",
+#                              reply_markup=Filters.dashboard_filter())
+#         await bot.send_message(chat_id=message.from_user.id,
+#                                text=f"Немає доступних оголошень",
+#                                reply_markup=Navigation.finder_keyboard())
+#
+# class SeekerMH: # Тот кто ищет (ПОТЕРЯЛ)
+#
+#     @classmethod
+#     async def cls_menu(cls, message: Message) -> None:
+#         photo = open("img/marketplace_png.png", "rb")
+#         await bot.send_photo(chat_id=message.from_user.id,
+#                              caption=f"💡 Що шукаєш сьогодні?",
+#                              photo=photo,
+#                              reply_markup=MainMenu.seeker_keyboard())
 
 class StartMH:
 
-    finder = FinderMH()
-    seeker = SeekerMH()
+    # finder = FinderMH()
+    # seeker = SeekerMH()
 
     @classmethod
     async def cls_menu(cls, message: Message) -> None:
@@ -324,13 +107,13 @@ class MyProfileMH:
         image = open('img/reg_data_board.png', 'rb')
 
         if not await contextManager.states_equals():
-            user_data = await UserAPI.get_user_data(telegram_id=state.user)
-            print(user_data)
+            response = await UserAPI.get_user(telegram_id=state.user)
+            user: BaseUser = BaseUser().model_validate(response.data)
             await contextManager.appent_delete_list(
                 await bot.send_photo(chat_id=state.chat,
                                      caption="📃 *Опис*"
                                              "\n\n"
-                                             f"{user_data.data['description']}"
+                                             f"{user.user_data.description}"
                                              "\n\n"
                                              "⭐ *Досягнення*"
                                              "\n\n"
@@ -436,21 +219,18 @@ class MyProfileMH:
 
 
 
-
-
-
 class UpdateDescriptionMH:
 
     currentState: CurrentState = CurrentState(keyboard_class=UpdateProfile,
                                               state_class=UpdateDescriptionStates)
     branchManager: BranchManager = BranchManager()
-    data_for_send = None
+    data_for_send: UpdateDescription = None
 
     @classmethod
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await cls.currentState.set_state(state)
         await UpdateDescriptionStates.description.set()
-        cls.data_for_send = PayloadStructure()
+        cls.data_for_send = UpdateDescription()
         message = await contextManager.edit(text="⌨️ *Уведіть новий опис Вашого профіля:*",
                                             image="dashboard_profile",
                                             reply_markup=UpdateProfile.base_keyboard(with_save=False),
@@ -476,7 +256,7 @@ class UpdateDescriptionMH:
 
     @classmethod
     async def update_data(cls, message: Message, state: FSMContext) -> None:
-        cls.data_for_send.add(description=message.text)
+        cls.data_for_send.user_data.description = message.text
         await message.delete()
 
     @classmethod
@@ -487,8 +267,8 @@ class UpdateDescriptionMH:
     @classmethod
     async def save_data(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await UpdateDescriptionStates.confirm_description.set()
-        cls.data_for_send.add(telegram_id=state.user)
-        await UserAPI.update_description(**cls.data_for_send.as_dict())
+        cls.data_for_send.telegram_id = state.user
+        await UserAPI.update_description(data=cls.data_for_send.model_dump())
         await MyProfileMH.edit_menu(callback=callback,
                                     state=state)
 
@@ -505,14 +285,18 @@ class CreateGig:
     current_state: CurrentState = CurrentState(keyboard_class=UpdateProfile,
                                                state_class=CreateGigStates)
     branch_manager: BranchManager = BranchManager()
-    data_for_send: PayloadStructure = None
+    list_menu_manager: ListMenuManager = ListMenuManager()
+
+    data_for_send: GigCreate = None
     select_date = Calendar()
 
     @classmethod
     async def enter_name(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await cls.current_state.set_state(state)
         await CreateGigStates.name.set()
-        cls.data_for_send = PayloadStructure()
+        cls.data_for_send = GigCreate()
+        cls.data_for_send.default()
+        print(cls.data_for_send.model_dump())
         edited_message = await contextManager.edit(current_state=cls.current_state,
                                                    text=f"⌨️ *Уведіть назву оголошення:*",
                                                    image="dashboard_profile",
@@ -531,7 +315,7 @@ class CreateGig:
     async def check_name(cls, message: Message, state: FSMContext) -> None:
 
         # TODO: text validation
-        cls.data_for_send.add(name=message.text)
+        cls.data_for_send.data.name = message.text
         await message.delete()
         edited_message = await contextManager.edit(text=f"Ви увели: *{message.text}*\n\n"
                                                         f""
@@ -553,7 +337,7 @@ class CreateGig:
 
     @classmethod
     async def check_description(cls, message: Message, state: FSMContext) -> None:
-        cls.data_for_send.add(description=message.text)
+        cls.data_for_send.data.description = message.text
         await message.delete()
         edited_message = await contextManager.edit(text=f"Ви увели: *{message.text}*\n\n"
                                                         f""
@@ -577,7 +361,11 @@ class CreateGig:
     async def check_image(cls, message: Message, state: FSMContext) -> None:
 
         file_id = utils.file_id(message=message)
-        cls.data_for_send.add(photo=file_id)
+        async with state.proxy() as data:
+            data.update({
+                "file_id": file_id
+            })
+        # cls.data_for_send.add(photo=file_id)
         await photos_db.save(telegram_id=1125858430,
                              file_id=file_id,
                              gig_id="dfhgbd")
@@ -605,8 +393,8 @@ class CreateGig:
         location = utils.location(message=message)
         address = await LocationAPI.get_address(**location)
         city = await LocationStructure(location=address.data).get_city(with_type=True)
-        cls.data_for_send.add(location=location,
-                              address=address.data)
+        cls.data_for_send.data.address = address.data
+        cls.data_for_send.data.location = location
         await message.delete()
         edited_message = await contextManager.edit(text=f"Ви вказали: *{city}*\n\n"
                                                         f""
@@ -643,31 +431,75 @@ class CreateGig:
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
         print(timestamp, datetime.datetime.fromtimestamp(timestamp))
-        cls.data_for_send.add(date=timestamp)
-        print(cls.data_for_send.as_dict())
+        cls.data_for_send.data.date = timestamp
+
+    @classmethod
+    async def enter_tags(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await CreateGigStates.tags.set()
+        edited_message = await contextManager.edit(text=f"⌨️ *Уведіть до 5 тегів для Вашого оголошення:*",
+                                                   image="dashboard_profile",
+                                                   reply_markup=ListMenu.keyboard(with_skip=True),
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message,
+                                     state=await cls.current_state.state_attr())
+
+    @classmethod
+    async def add_tag(cls, message: Message, state: FSMContext) -> None:
+        reple_markup = await cls.list_menu_manager.add(message=message)
+        edited_message = await contextManager.edit(text=f"❌ *Натисніть на тег, щоб видалити його.*\n\n"
+                                                        f""
+                                                        f"👆 Натисніть *\"Далі\"* або *додайте більше тегів*:",
+                                                   reply_markup=reple_markup,
+                                                   with_placeholder=False)
+        await cls.branch_manager.set(message=edited_message)
 
     @classmethod
     async def confirm_create(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await CreateGigStates.check_data.set()
-        address = await LocationStructure(location=cls.data_for_send.address).get_city(with_type=True)
-        date = utils.date(timestamp=cls.data_for_send.date)
-        edited_message = await contextManager.edit(text=f"🔍 *Перевірте інформацію:*\n\n"
-                                                        f""
-                                                        f"Назва: *{cls.data_for_send.name}*\n"
-                                                        f"Опис: *{cls.data_for_send.description}*\n"
-                                                        f"Дата: *{date}*\n"
-                                                        f"Місце: *{address}*\n\n"
-                                                        f""
-                                                        f"*Публікуємо оголошення?*",
-                                                   file_id=cls.data_for_send.photo,
+        cls.data_for_send.data.tags = cls.list_menu_manager.elements_list
+        async with state.proxy() as data:
+            file_id = data["file_id"]
+        address = await LocationStructure(location=cls.data_for_send.data.address).get_city(with_type=True)
+        date = utils.date(timestamp=cls.data_for_send.data.date)
+
+        n = "\n"
+        text = f"🔍 *Перевірте інформацію:*\n\n"\
+               f""\
+               f"Назва: *{cls.data_for_send.data.name}*\n"\
+               f"Опис: *{cls.data_for_send.data.description}*\n"\
+               f"Дата: *{date}*\n"\
+               f"Місце: *{address}*\n"\
+               f"{'Теги: *#*' + ' *#*'.join(cls.data_for_send.data.tags) + f'{n}{n}' if cls.data_for_send.data.tags else n}"\
+               f""\
+               f"*Публікуємо оголошення?*"
+
+        edited_message = await contextManager.edit(text=text,
+                                                   file_id=file_id,
                                                    reply_markup=YesOrNo.keyboard(is_inline_keyboard=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message,
                                      state=await cls.current_state.state_attr())
 
     @classmethod
+    async def create(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        cls.data_for_send.telegram_id = state.user
+        data = cls.data_for_send.model_dump()
+        response = await UserAPI.create_gig(data=data)
+        if response.status in range(200, 300):
+            await callback.answer(text=f"✅ Успішно!",
+                                  show_alert=True)
+        else:
+            await callback.answer(text=f"❌ Помилка!\n"
+                                  f"Будь ласка, повторіть спробу.",
+                                  show_alert=True)
+
+        await MyProfileMH.my_gigs(message=callback.message,
+                                  state=state)
+
+
+    @classmethod
     async def confirm_backward(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        if not cls.data_for_send.as_dict():
+        if cls.data_for_send.defaults == cls.data_for_send.model_dump():
             await MyProfileMH.my_gigs(message=callback.message,
                                       state=state)
             return
@@ -762,7 +594,22 @@ def register_user_handlers(dp: Dispatcher) -> None:
         CreateGig.set_date, Text(endswith=CalendarMenu.date_callback), state=CreateGigStates.date
     )
     dp.register_callback_query_handler(
-        CreateGig.confirm_create, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.date
+        CreateGig.enter_tags, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.date
+    )
+    dp.register_message_handler(
+        CreateGig.add_tag, state=CreateGigStates.tags
+    )
+    dp.register_callback_query_handler(
+        CreateGig.list_menu_manager.remove, Text(endswith="_list_menu"), state=CreateGigStates.tags
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_create, Text(equals=CreateGigMenu.skip_callback), state=CreateGigStates.tags
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_create, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.tags
+    )
+    dp.register_callback_query_handler(
+        CreateGig.create, Text(equals=YesOrNo.yes_callback), state=CreateGigStates.check_data
     )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.name
@@ -778,6 +625,9 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.date
+    )
+    dp.register_callback_query_handler(
+        CreateGig.confirm_backward, Text(equals=YesOrNo.cancel_callback), state=CreateGigStates.tags
     )
     dp.register_callback_query_handler(
         MyProfileMH.my_gigs, Text(equals=YesOrNo.yes_callback), state=CreateGigStates.backward

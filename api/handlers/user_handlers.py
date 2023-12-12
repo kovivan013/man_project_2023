@@ -70,6 +70,20 @@ def get_all_users(response: Response, db: Session = Depends(get_db)):
 
     return result
 
+@user_router.get("/gigs/active")
+def get_active_gigs(response: Response, db: Session = Depends(get_db)):
+    result = DataStructure()
+    users = db.query(User).all()
+    for i in users:
+        user = BaseUser().model_validate(i.as_dict())
+        if active := user.gigs.active:
+            for j, k in active.items():
+                result.data.update({
+                    j: k
+                })
+
+    return result
+
 @user_router.patch("/update_description")
 def update_description(request_data: UpdateDescription, response: Response, db: Session = Depends(get_db)):
     result = DataStructure()
