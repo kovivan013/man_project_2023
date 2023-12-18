@@ -29,7 +29,7 @@ import datetime
 
 from dataclasses import dataclass
 from typing import Union
-from man_project_2023.telegram_bot.states.states import CurrentState, ProfileStates
+from man_project_2023.telegram_bot.states.states import ProfileStates
 from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu, CalendarMenu
 from aiogram.types import Message, InputMediaPhoto, CallbackQuery
 from aiogram.dispatcher.storage import FSMContext

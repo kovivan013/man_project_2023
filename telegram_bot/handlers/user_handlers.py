@@ -10,7 +10,7 @@ from man_project_2023.telegram_bot.utils.utils import Utils
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
 from man_project_2023.telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
-    CreateGigStates, CurrentState, State
+    CreateGigStates, MainMenuStates, State
 )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     Calendar, CurrentState, ContextManager, ListMenuManager,
@@ -18,11 +18,11 @@ from man_project_2023.telegram_bot.classes.utils_classes import (
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu
+    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu
 )
 
 from man_project_2023.photos_database.handlers import PhotosDB
-from man_project_2023.api.schemas.request_schemas import (
+from man_project_2023.utils.schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser
 )
 
@@ -55,26 +55,43 @@ class RegisterMH:
 #                              photo=photo,
 #                              reply_markup=MainMenu.seeker_keyboard())
 
-class StartMH:
-
-    # finder = FinderMH()
-    # seeker = SeekerMH()
-
-    @classmethod
-    async def cls_menu(cls, message: Message) -> None:
-        data: dict = {
-            "telegram_id": message.from_user.id,
-            "username": message.from_user.username if message.from_user.username is not None else ""
-        }
-        await UserAPI.create_user(**data)
-        user_status = await UserAPI.get_user_mode(telegram_id=message.from_user.id)
-        if user_status:
-            await cls.finder.cls_menu(message)
-        else:
-            await cls.seeker.cls_menu(message)
-
 contextManager = ContextManager()
 photos_db = PhotosDB(bot=bot)
+
+
+class StartMH:
+    current_state: CurrentState = CurrentState(keyboard_class=MainMenu,
+                                               state_class=MainMenuStates)
+
+    @classmethod
+    async def context_manager(cls, message: Message, state: FSMContext) -> None:
+        await cls.current_state.set_state(state)
+        await MainMenuStates.start_menu.set()
+        response = await UserAPI.get_user(telegram_id=state.user)
+        user = BaseUser().model_validate(response.data)
+
+        await contextManager.send_default(current_state=cls.current_state,
+                                          text=f"Вітаємо, *{user.username}*!",
+                                          reply_markup=MainMenu.keyboard(),
+                                          image="dashboard_profile")
+
+
+    @classmethod
+    async def start_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await contextManager.delete()
+        await cls.current_state.update_classes(keyboard_class=MainMenu,
+                                               state_class=MainMenuStates)
+        await cls.context_manager(message=callback.message,
+                                  state=state)
+        # await contextManager.edit(current_state=cls.current_state,
+        #                           text=)
+        # response = await UserAPI.get_user(telegram_id=message.from_user.id)
+        # user = BaseUser().model_validate(response.data)
+        #
+        # await message.answer(text=f"Вітаємо, *{user.username}*!",
+        #                      reply_markup=MainMenu.keyboard(),
+        #                      parse_mode="Markdown")
+
 
 class MyProfileMH:
 
@@ -91,16 +108,17 @@ class MyProfileMH:
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
         await cls.current_state.set_state(state)
         await contextManager.send(current_state=cls.current_state,
-                                        required_state=ProfileStates.info_about,
-                                        image="dashboard_profile")
+                                  required_state=ProfileStates.info_about,
+                                  image="dashboard_profile")
         await cls.info_about(message=message,
                              state=state)
 
 
     @classmethod
-    async def info_about(cls, message: Message, state: FSMContext) -> None:
+    async def info_about(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await cls.current_state.update_classes(keyboard_class=MyProfile,
                                                state_class=MyProfile)
+        await cls.current_state.set_state(state)
         await ProfileStates.info_about.set()
         await contextManager.edit(current_state=cls.current_state,
                                   image="dashboard_profile")
@@ -177,46 +195,6 @@ class MyProfileMH:
         await contextManager.select(current_state=cls.current_state,
                                           delete_messages=True,
                                           reply_markup=UpdateProfile.keyboard())
-# class Test:
-#
-#     utils = HandlersUtils()
-#
-#     @classmethod
-#     async def keyboards_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-#         current_state = CurrentState(state,
-#                                      MyProfile)
-#         image = open('img/test35459468345687456.png', 'rb')
-#         await callback.message.edit_media(media=InputMediaPhoto(
-#             media=image,
-#             caption=f"💻 *Оберіть необхідне меню:*",
-#             parse_mode="Markdown"
-#         ),
-#             reply_markup=DropdownMenu.menu_keyboard(
-#                 buttons=await current_state.get_buttons()
-#             )
-#         )
-#         await ProfileStates.select_menu.set()
-#
-#     @classmethod
-#     async def input_kb_func(cls, message: Message, state: FSMContext) -> None:
-#         current_state = CurrentState(state,
-#                                      MyProfile)
-#
-#
-#         image = open('img/dashboard_profile.png', 'rb')
-#         await ProfileStates.gigs.set()
-#         await bot.send_photo(chat_id=message.chat.id,
-#                              photo=image,
-#                              caption="Test input message to keyboards select menu",
-#                              reply_markup=DropdownMenu.placeholder_menu(
-#                                  current_menu=await current_state.get_placeholder()
-#                              )
-#                              )
-#         image = open('img/test35459468345687456.png', 'rb')
-#         await message.answer_photo(caption=f"Test caption",
-#                                    photo=image
-#                                    )
-
 
 
 class UpdateDescriptionMH:
@@ -365,10 +343,7 @@ class CreateGig:
             data.update({
                 "file_id": file_id
             })
-        # cls.data_for_send.add(photo=file_id)
-        await photos_db.save(telegram_id=1125858430,
-                             file_id=file_id,
-                             gig_id="dfhgbd")
+
         await message.delete()
         edited_message = await contextManager.edit(text=f"▲ Ви відправили фотографію\n\n"
                                                         f""
@@ -485,6 +460,13 @@ class CreateGig:
         cls.data_for_send.telegram_id = state.user
         data = cls.data_for_send.model_dump()
         response = await UserAPI.create_gig(data=data)
+        response_data = BaseGig().model_validate(response.data)
+        async with state.proxy() as data:
+            file_id = data["file_id"]
+        await photos_db.save(telegram_id=cls.data_for_send.telegram_id,
+                             file_id=file_id,
+                             gig_id=response_data.id)
+
         if response.status in range(200, 300):
             await callback.answer(text=f"✅ Успішно!",
                                   show_alert=True)
@@ -508,9 +490,12 @@ class CreateGig:
 
 
 def register_user_handlers(dp: Dispatcher) -> None:
-    # dp.register_message_handler(
-    #     StartMH.cls_menu, commands=["start"], state=None
-    # )
+    dp.register_message_handler(
+        StartMH.context_manager, commands=["start"], state=None
+    )
+    dp.register_callback_query_handler(
+        StartMH.start_menu, Text(equals="back_to_main"), state=["*"]
+    )
     dp.register_message_handler(
         MyProfileMH.context_manager, commands=["profile"], state=None
     )
@@ -519,6 +504,9 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.info_about, Text(equals=MainMenu.profile_callback), state=MainMenuStates.start_menu
     )
     dp.register_callback_query_handler(
         MyProfileMH.info_about, Text(equals=MyProfile().info_about_callback), state=ProfileStates.select_menu

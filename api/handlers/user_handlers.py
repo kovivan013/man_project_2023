@@ -8,10 +8,11 @@ from sqlalchemy.orm import Session
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.api.schemas.request_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser
-from man_project_2023.api.schemas.data_schemas import DataStructure
-from man_project_2023.api.utils import exceptions
+from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser
+from man_project_2023.utils.debug import exceptions
 from man_project_2023.api.utils.utils import Utils
+
+from man_project_2023.utils.schemas.schemas import DataStructure
 
 user_router = APIRouter()
 
@@ -27,9 +28,7 @@ def create_user(request_data: UserCreate, response: Response, request: Request, 
 
     data = BaseUser().model_validate(request_data.model_dump())
 
-    result.status = status.HTTP_201_CREATED
-    result._success()
-    result.message = "test"
+    result._status = status.HTTP_201_CREATED
     result.data = data.model_dump()
 
     return PostRequest(db=db,
@@ -54,19 +53,25 @@ def create_gig(request_data: GigCreate, response: Response, request: Request, db
 
     db.commit()
     result.data = data.model_dump()
-    result._success()
+    result._status = status.HTTP_200_OK
 
     return result
 
 @user_router.get("/all_users")
 def get_all_users(response: Response, db: Session = Depends(get_db)):
     result = DataStructure()
-    users = db.query(User).all()
-    for i in users:
-        user = BaseUser().model_validate(i.as_dict())
-        result.data.update({
-            user.telegram_id: user.model_dump()
-        })
+
+    users = db.query(User.telegram_id).all()
+    user = db.query(User).filter(User.telegram_id == 345).first()
+    result.data = [int(i[0]) for i in users]
+
+    # users = db.query(User).all()
+    # for i in users:
+    #     user = BaseUser().model_validate(i.as_dict())
+    #     result.data.update({
+    #         user.telegram_id: user.model_dump()
+    #     })
+    result._status = status.HTTP_200_OK
 
     return result
 
@@ -81,6 +86,8 @@ def get_active_gigs(response: Response, db: Session = Depends(get_db)):
                 result.data.update({
                     j: k
                 })
+
+    result._status = status.HTTP_200_OK
 
     return result
 
@@ -97,11 +104,11 @@ def update_description(request_data: UpdateDescription, response: Response, db: 
 
     db.commit()
     result.data = request_data.model_dump()
-    result._success()
+    result._status = status.HTTP_200_OK
 
     return result
 
-@user_router.get("/{telegram_id}/")
+@user_router.get("/{telegram_id}")
 def get_user(telegram_id: int, db: Session = Depends(get_db)):
     result = DataStructure()
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
@@ -111,7 +118,7 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
 
     user_instance = BaseUser().model_validate(user.as_dict())
     result.data = user_instance.model_dump()
-    result._success()
+    result._status = status.HTTP_200_OK
 
     return result
 
@@ -124,7 +131,7 @@ def user_data(telegram_id: int, db: Session = Depends(get_db)):
         raise exceptions.ItemNotFoundException
 
     result.data = user.user_data
-    result._success()
+    result._status = status.HTTP_200_OK
 
     return result
 
@@ -138,7 +145,7 @@ def user_gigs(telegram_id: int, db: Session = Depends(get_db)):
         raise exceptions.ItemNotFoundException
 
     result.data = user.gigs
-    result._success()
+    result._status = status.HTTP_200_OK
 
     return result
 
@@ -150,7 +157,7 @@ def user_mode(telegram_id: int, db: Session = Depends(get_db)):
     if user is None:
         raise exceptions.ItemNotFoundException
 
-    result._success()
+    result._status = status.HTTP_200_OK
 
     return user.mode
 

@@ -1,7 +1,8 @@
 import aiohttp
 from abc import ABC, abstractmethod
 
-from man_project_2023.telegram_bot.api.utils_schemas import DataStructure, ResponseStructure
+from man_project_2023.telegram_bot.api.utils_schemas import ResponseStructure
+from man_project_2023.utils.schemas.schemas import DataStructure
 
 
 class RequestSender(ABC):
@@ -36,13 +37,12 @@ class RequestSender(ABC):
         result.data = answer.data["data"] if "data" in answer.data else answer.data
 
         if answer.status not in range(200, 300):
-            error_text: str = (
-                f"Status: {answer.status}\n"
-                f"Url: {self.url}\n"
-                f"Error data: {answer.data}"
-            )
+            error_text: dict = {
+                "status": answer.status,
+                "url": self.url,
+                "data": answer.data
+            }
             return error_text
-        result.success = True
         return result
 
 class GetRequest(RequestSender):
@@ -51,7 +51,6 @@ class GetRequest(RequestSender):
         self._data_for_send: dict = data
     async def _send(self, session) -> dict:
         self._payload.update(params=self._data_for_send)
-        print(self._payload)
         async with session.get(**self._payload) as response:
             return ResponseStructure(
                 status=response.status,

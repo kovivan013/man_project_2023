@@ -2,10 +2,12 @@ import datetime
 
 from aiogram.types import CallbackQuery, Message
 from man_project_2023.telegram_bot.config import bot
+from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI
 from man_project_2023.telegram_bot.keyboards.keyboards import CalendarMenu, InlineKeyboardMarkup, DropdownMenu
 from aiogram.types import InputMediaPhoto, InputFile
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
+from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser
 from man_project_2023.telegram_bot.api.utils_schemas import StateStructure
 from aiogram.dispatcher.storage import FSMContext
 
@@ -262,7 +264,25 @@ class ContextManager:
                                                    required_state=required_state
                                                )
                                            ))
+        return self.message
 
+    async def send_default(self, current_state: CurrentState, text: str,
+                           image: str = "", reply_markup = None):
+        self.current_state = current_state
+        chat_id: int = self.current_state.state.chat
+        if image:
+            photo = await self.current_state.state_photo(image=image)
+            self.message = await bot.send_photo(chat_id=chat_id,
+                                                caption=text,
+                                                photo=photo,
+                                                reply_markup=reply_markup,
+                                                parse_mode="Markdown")
+
+            return self.message
+        await bot.send_message(chat_id=chat_id,
+                               text=text,
+                               reply_markup=reply_markup,
+                               parse_mode="Markdown")
 
     async def select(self, current_state: CurrentState = None,
                      delete_messages: bool = False,
@@ -293,27 +313,25 @@ class ContextManager:
         if current_state is not None:
             self.current_state = current_state
         edited_message: Message = None
-        if self.is_used:
 
-            if not await self.states_equals():
-                await self.delete_context_messages()
+        if not await self.states_equals():
+            await self.delete_context_messages()
 
-            try:
-                media_id = utils.file_id(self.message)
-                media = await self.current_state.state_photo(image=image) if not file_id and image else file_id if file_id else media_id
-                edited_message = await self.message.edit_media(media=InputMediaPhoto(
-                    media=media,
-                    caption=text,
-                    parse_mode="Markdown"
-                ),
-                    reply_markup=DropdownMenu.placeholder_menu(
-                        current_menu=await self.current_state.get_placeholder()
-                    ) if reply_markup is None and with_placeholder else reply_markup)
-                self.message = edited_message
-            except Exception as err:
-                print(err)
-                return None
-        self.is_used = True
+        try:
+            media_id = utils.file_id(self.message)
+            media = await self.current_state.state_photo(image=image) if not file_id and image else file_id if file_id else media_id
+            edited_message = await self.message.edit_media(media=InputMediaPhoto(
+                media=media,
+                caption=text,
+                parse_mode="Markdown"
+            ),
+                reply_markup=DropdownMenu.placeholder_menu(
+                    current_menu=await self.current_state.get_placeholder()
+                ) if reply_markup is None and with_placeholder else reply_markup)
+            self.message = edited_message
+        except Exception as err:
+            print(err)
+            return None
         return edited_message
 
     async def appent_delete_list(self, message: Message):
@@ -337,8 +355,22 @@ class ContextManager:
 
     async def delete(self):
         await self.message.delete()
+        await self.delete_context_messages()
+        self.previous_state = None
         self.reset_data()
 
 
     def reset_data(self):
         self.is_used = False
+
+
+class Marketplace:
+    """
+    Класс который обеспечивает работу системы поиска проекта, также все функции связанные с собственными объявлениями пользователя
+    Функции фильтров и прочего
+    """
+
+    async def get_user_gigs(self, telegram_id: int):
+        response = await UserAPI.get_user(telegram_id=telegram_id)
+        # if response.success:
+

@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from man_project_2023.api.models.models import User
 from man_project_2023.api.handlers.user_handlers import Response
-from man_project_2023.api.schemas.data_schemas import DataStructure
+from man_project_2023.utils.schemas.schemas import DataStructure
 
 class RequestSender(ABC):
 

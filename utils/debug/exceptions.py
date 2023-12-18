@@ -10,5 +10,3 @@ ItemNotFoundException = HTTPException(
     status_code=status.HTTP_404_NOT_FOUND,
     detail="Item not fount"
 )
-
-# перемещено в utils/debug/exceptions

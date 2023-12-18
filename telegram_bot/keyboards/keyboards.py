@@ -171,7 +171,6 @@ class DropdownMenu:
     # режим select (можно выбрать несколько вариантов чего-то например для удаления)
 
     # TODO: Возможно уберу, поскольку это в тексте сообщения + На пк - лучше как сейчас, на телефона и так и так
-
     filters_sign: str = f"Оберіть необхідний фільтр ✅"
     menu_sign: str = f"Оберіть необхідне меню 💻"
     select_sign: str = f"Оберіть потрібні варіанти 🔑"
@@ -184,7 +183,7 @@ class DropdownMenu:
 
         keyboard.add(
             InlineKeyboardButton(text=f"↩ На головну",
-                                 callback_data="change_mode"),
+                                 callback_data="back_to_main"),
             InlineKeyboardButton(text=f"Режим 🔦",
                                  callback_data="change_mode"),
             InlineKeyboardButton(**current_menu)
@@ -283,7 +282,7 @@ class MainMenu:
         )
         keyboard.add(
             InlineKeyboardButton(text=cls.profile,
-                                 callback_data=cls.change_mode_callback),
+                                 callback_data=cls.profile_callback),
             InlineKeyboardButton(text=cls.settings,
                                  callback_data=cls.settings_callback),
             InlineKeyboardButton(text=cls.support,

@@ -27,16 +27,6 @@ from pydantic import BaseModel
 class StateProxy(BaseModel):
     file_id: str = ""
 
-
-class DataStructure(BaseModel):
-    status: int = 200
-    success: bool = False
-    message: str = ""
-    data: dict = {}
-
-    def as_dict(self) -> dict:
-        return self.__dict__
-
 class ResponseStructure:
     def __init__(self, status: int, data: dict):
         self.status = status

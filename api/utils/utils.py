@@ -6,6 +6,7 @@ class Utils:
     def get_uuid(self):
         return str(uuid.uuid4())
 
+    # delete
     def as_dict(self, data: dict = None):
         if data is None:
             data = vars(self).copy()
@@ -17,9 +18,6 @@ class Utils:
                 continue
 
         return data
-
-
-
 
 # class BaseUser(Utils):
 #     def __init__(self):
