@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Dict
 
+from aiogram.types import InputMediaPhoto, InputFile
+
 class DataStructure(BaseModel):
     status: int = 200
     success: bool = False
@@ -35,4 +37,11 @@ class DataStructure(BaseModel):
         if self.status in range(200, 300) and self.success:
             return True
         return False
+
+class GigMessage(BaseModel):
+    telegram_id: int = 0
+    id: str = ""
+    text: str = ""
+    callback: str = ""
+
 

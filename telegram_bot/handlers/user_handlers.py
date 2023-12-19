@@ -1,9 +1,10 @@
 import datetime
 
-from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
+from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types.message import ContentTypes
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.dispatcher.filters import Text
+from aiogram.types import InputMediaPhoto, InputFile
 
 from man_project_2023.telegram_bot.config import bot, Dispatcher
 from man_project_2023.telegram_bot.utils.utils import Utils
@@ -14,11 +15,11 @@ from man_project_2023.telegram_bot.states.states import (
 )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     Calendar, CurrentState, ContextManager, ListMenuManager,
-    BranchManager
+    BranchManager, Marketplace
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu
 )
 
 from man_project_2023.photos_database.handlers import PhotosDB
@@ -98,6 +99,8 @@ class MyProfileMH:
     current_state: CurrentState = CurrentState(keyboard_class=MyProfile,
                                                state_class=ProfileStates)
     branchManager: BranchManager = BranchManager()
+    marketplace: Marketplace = Marketplace()
+
 
     @classmethod
     async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -148,42 +151,58 @@ class MyProfileMH:
         await cls.current_state.update_classes(keyboard_class=MyProfile,
                                                state_class=MyProfile)
         await ProfileStates.gigs.set()
+        kb = InlineKeyboardMarkup(row_width=2)
+        kb.add(InlineKeyboardButton(
+            text="Додати оголошення ➕",
+            callback_data="add_gig"
+        ))
         await contextManager.edit(current_state=cls.current_state,
-                                  image="dashboard_profile")
+                                  image="dashboard_profile",
+                                  reply_markup=kb)
+        gigs = await cls.marketplace.get_user_gigs(telegram_id=state.user)
         if not await contextManager.states_equals():
-            preview = open('img/423.png', 'rb')
-            await contextManager.appent_delete_list(
-                await bot.send_photo(chat_id=state.chat,
-                                     caption="Я знайшов *чорну куртку*.\n"
-                                             "📍 *Кременчук*\n"
-                                             "⌚ *Сьогодні, об 16:56*",
-                                     photo=preview,
-                                     reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                                     parse_mode="Markdown")
-            )
-            preview = open('img/sh.png', 'rb')
-            await contextManager.appent_delete_list(
-                await bot.send_photo(chat_id=state.chat,
-                                     caption="Я знайшов *шапку*.\n"
-                                             "📍 *Кременчук*\n"
-                                             "⌚ *Учора, об 11:32*",
-                                     photo=preview,
-                                     reply_markup={
-                                         "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                                     parse_mode="Markdown")
-            )
-            preview = open('img/pas.png', 'rb')
-            await contextManager.appent_delete_list(
-                await bot.send_photo(chat_id=state.chat,
-                                     caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
-                                             "📍 *Кременчук*\n"
-                                             "⌚ *25.10.23*",
-                                     photo=preview,
-                                     reply_markup={
-                                         "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
-                                                             [{"text": "Додати оголошення ➕", "callback_data": "add_gig"}]]},
-                                     parse_mode="Markdown")
-            )
+            for gig in gigs:
+                await contextManager.appent_delete_list(
+                    await bot.send_photo(chat_id=gig.telegram_id,
+                                         photo=InputFile(photos_db.get(telegram_id=gig.telegram_id,
+                                                                       gig_id=gig.id)),
+                                         caption=gig.text,
+                                         reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+                                         parse_mode="Markdown")
+                )
+            # preview = open('img/423.png', 'rb')
+            # await contextManager.appent_delete_list(
+            #     await bot.send_photo(chat_id=state.chat,
+            #                          caption="Я знайшов *чорну куртку*.\n"
+            #                                  "📍 *Кременчук*\n"
+            #                                  "⌚ *Сьогодні, об 16:56*",
+            #                          photo=preview,
+            #                          reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+            #                          parse_mode="Markdown")
+            # )
+            # preview = open('img/sh.png', 'rb')
+            # await contextManager.appent_delete_list(
+            #     await bot.send_photo(chat_id=state.chat,
+            #                          caption="Я знайшов *шапку*.\n"
+            #                                  "📍 *Кременчук*\n"
+            #                                  "⌚ *Учора, об 11:32*",
+            #                          photo=preview,
+            #                          reply_markup={
+            #                              "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+            #                          parse_mode="Markdown")
+            # )
+            # preview = open('img/pas.png', 'rb')
+            # await contextManager.appent_delete_list(
+            #     await bot.send_photo(chat_id=state.chat,
+            #                          caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
+            #                                  "📍 *Кременчук*\n"
+            #                                  "⌚ *25.10.23*",
+            #                          photo=preview,
+            #                          reply_markup={
+            #                              "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
+            #                                                  [{"text": "Додати оголошення ➕", "callback_data": "add_gig"}]]},
+            #                          parse_mode="Markdown")
+            # )
 
 
     @classmethod
@@ -274,7 +293,8 @@ class CreateGig:
         await CreateGigStates.name.set()
         cls.data_for_send = GigCreate()
         cls.data_for_send.default()
-        print(cls.data_for_send.model_dump())
+        cls.list_menu_manager.reset()
+
         edited_message = await contextManager.edit(current_state=cls.current_state,
                                                    text=f"⌨️ *Уведіть назву оголошення:*",
                                                    image="dashboard_profile",
@@ -368,17 +388,21 @@ class CreateGig:
         location = utils.location(message=message)
         address = await LocationAPI.get_address(**location)
         city = await LocationStructure(location=address.data).get_city(with_type=True)
-        cls.data_for_send.data.address = address.data
+
+        location.update(data=city)
         cls.data_for_send.data.location = location
+        cls.data_for_send.data.address = address.data
+
         await message.delete()
-        edited_message = await contextManager.edit(text=f"Ви вказали: *{city}*\n\n"
+
+        edited_message = await contextManager.edit(text=f"Ви вказали: *{' '.join(city.values())}*\n\n"
                                                         f""
                                                         f"👆 Натисніть *\"Далі\"* або відправте локацію *іншого місця*:",
                                                    image="dashboard_profile",
                                                    reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                    with_placeholder=False)
         await cls.branch_manager.set(message=edited_message)
-        print(f"{city}\n{location}")
+        print(f"\n{city}\n{location}")
 
     @classmethod
     async def enter_date(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -443,7 +467,7 @@ class CreateGig:
                f"Назва: *{cls.data_for_send.data.name}*\n"\
                f"Опис: *{cls.data_for_send.data.description}*\n"\
                f"Дата: *{date}*\n"\
-               f"Місце: *{address}*\n"\
+               f"Місце: *{' '.join(address.values())}*\n"\
                f"{'Теги: *#*' + ' *#*'.join(cls.data_for_send.data.tags) + f'{n}{n}' if cls.data_for_send.data.tags else n}"\
                f""\
                f"*Публікуємо оголошення?*"

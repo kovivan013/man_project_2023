@@ -31,7 +31,6 @@ class PhotosDB:
 
 
     async def save(self, telegram_id: int, file_id: str, gig_id: str):
-        print(self.__BASE_DIR)
         photo_path = await self.bot.get_file(file_id=file_id)
         user = self.join(self.__BASE_DIR, telegram_id)
         gigs = self.join(user, "gigs")
@@ -44,8 +43,13 @@ class PhotosDB:
         await self.bot.download_file(photo_path.file_path,
                                      save_path)
 
-    async def get(self, telegram_id: int):
-        pass
+    def get(self, telegram_id: int, gig_id: str):
+        user = self.join(self.__BASE_DIR, telegram_id, absolute_path=True)
+        gigs = self.join(user, "gigs")
+
+        gig = self.join(gigs, gig_id)
+        print(gig)
+        return open(f"{gig}\preview.jpg", "rb")
 
 #
 # import asyncio

@@ -456,8 +456,8 @@ class CalendarMenu(Controls, YesOrNo):
         args = all([year, month, day])
 
         if args:
-            print(year, month, day)
-            today = datetime.datetime(year, month, day)
+            now = datetime.datetime.now()
+            today = datetime.datetime(year, month, day, now.hour, now.minute)
         else:
             today = datetime.datetime.now()
 
@@ -516,7 +516,9 @@ class CalendarMenu(Controls, YesOrNo):
                     continue
                 callback = int(datetime.datetime(today.year,
                                                  today.month,
-                                                 day).timestamp())
+                                                 day,
+                                                 today.hour,
+                                                 today.minute).timestamp())
                 keyboard.insert(
                     InlineKeyboardButton(
                         text=f"{day}",

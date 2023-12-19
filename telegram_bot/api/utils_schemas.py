@@ -58,7 +58,11 @@ class LocationStructure:
 
         for i, v in keys.items():
             if i in address.keys():
-                city: str = f"{v['type'] + ' ' if with_type and v['type'] else ''}{address[i]}"
+                city: dict = {
+                    "type": v['type'] if with_type and v['type'] else '',
+                    "name": address[i]
+                }
+                # city: dict = [v['type'] + ' ' if with_type and v['type'] else '', address[i]]
                 return city
 
 

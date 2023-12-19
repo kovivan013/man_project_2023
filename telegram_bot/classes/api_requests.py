@@ -11,29 +11,20 @@ class API:
     __BASE_SERVER_URL: str = BASE_API_URL
 
     @classmethod
-    async def _get_request(cls, endpoint: str, data: dict = None, base_request: bool = True):
-        if base_request:
-            url: str = cls.__BASE_SERVER_URL + endpoint
-        else:
-            url: str = endpoint
+    async def _get_request(cls, endpoint: str, data: dict = None):
+        url: str = cls.__BASE_SERVER_URL + endpoint
         return await GetRequest(url=url,
                                 data=data).send_request()
 
     @classmethod
-    async def _post_request(cls, endpoint: str, data: dict, base_request: bool = True):
-        if base_request:
-            url: str = cls.__BASE_SERVER_URL + endpoint
-        else:
-            url: str = endpoint
+    async def _post_request(cls, endpoint: str, data: dict):
+        url: str = cls.__BASE_SERVER_URL + endpoint
         return await PostRequest(url=url,
                                  data=data).send_request()
 
     @classmethod
-    async def _patch_request(cls, endpoint: str, data: dict, base_request: bool = True):
-        if base_request:
-            url: str = cls.__BASE_SERVER_URL + endpoint
-        else:
-            url: str = endpoint
+    async def _patch_request(cls, endpoint: str, data: dict):
+        url: str = cls.__BASE_SERVER_URL + endpoint
         return await PatchRequest(url=url,
                                   data=data).send_request()
 
@@ -88,7 +79,7 @@ class LocationAPI(API):
 
     @classmethod
     async def get_address(cls, latitude: float, longitude: float) -> 'DataStructure':
-        endpoint: str = cls.__URL
+        url: str = cls.__URL
 
         data: dict = {
             "format": "json",
@@ -96,9 +87,8 @@ class LocationAPI(API):
             "lon": longitude
         }
 
-        return await cls._get_request(endpoint=endpoint,
-                                      data=data,
-                                      base_request=False)
+        return await GetRequest(url=url,
+                                data=data).send_request()
 
 
 # import asyncio

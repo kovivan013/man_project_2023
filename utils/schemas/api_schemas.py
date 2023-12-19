@@ -39,11 +39,14 @@ class BaseUser(BaseModel, Defaults):
     user_data: UserData = UserData()
     gigs: UserGigs = UserGigs()
 
+class Town(BaseModel):
+    type: str = ""
+    name: str = ""
 
 class Location(BaseModel):
     latitude: float = 0.0
     longitude: float = 0.0
-
+    data: Town = Town()
 
 class GigData(BaseModel):
     name: str = ""

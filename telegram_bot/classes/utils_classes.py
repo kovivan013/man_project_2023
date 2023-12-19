@@ -1,13 +1,22 @@
 import datetime
+from typing import List
 
 from aiogram.types import CallbackQuery, Message
+from aiogram.types import InputMediaPhoto, InputFile
 from man_project_2023.telegram_bot.config import bot
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI
-from man_project_2023.telegram_bot.keyboards.keyboards import CalendarMenu, InlineKeyboardMarkup, DropdownMenu
-from aiogram.types import InputMediaPhoto, InputFile
+from man_project_2023.telegram_bot.keyboards.keyboards import (
+    YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
+    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu
+)
+from man_project_2023.telegram_bot.keyboards.keyboards import (
+    CalendarMenu, InlineKeyboardMarkup, DropdownMenu
+)
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
 from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser
+from man_project_2023.utils.schemas.schemas import GigMessage
+from man_project_2023.photos_database.handlers import PhotosDB
 from man_project_2023.telegram_bot.api.utils_schemas import StateStructure
 from aiogram.dispatcher.storage import FSMContext
 
@@ -186,6 +195,9 @@ class ListMenuManager:
                 )
             )
 
+    def reset(self):
+        self.elements_list = []
+
 
 
 
@@ -317,6 +329,17 @@ class ContextManager:
         if not await self.states_equals():
             await self.delete_context_messages()
 
+        if with_placeholder:
+            keyboard = DropdownMenu.placeholder_menu(
+                    current_menu=await self.current_state.get_placeholder()
+            )
+            if reply_markup is not None:
+                for i in reply_markup.inline_keyboard:
+                    keyboard.inline_keyboard.append(i)
+        else:
+            keyboard = reply_markup
+
+
         try:
             media_id = utils.file_id(self.message)
             media = await self.current_state.state_photo(image=image) if not file_id and image else file_id if file_id else media_id
@@ -325,9 +348,7 @@ class ContextManager:
                 caption=text,
                 parse_mode="Markdown"
             ),
-                reply_markup=DropdownMenu.placeholder_menu(
-                    current_menu=await self.current_state.get_placeholder()
-                ) if reply_markup is None and with_placeholder else reply_markup)
+                reply_markup=keyboard)
             self.message = edited_message
         except Exception as err:
             print(err)
@@ -370,7 +391,53 @@ class Marketplace:
     Функции фильтров и прочего
     """
 
-    async def get_user_gigs(self, telegram_id: int):
+    def test_date(self, timestamp: int):
+        now = utils.now(timestamp=False)
+        date = datetime.datetime.fromtimestamp(timestamp)
+        today = all([date.year == now.year,
+                    date.month == now.month,
+                    date.day == now.day])
+        yesterday = all([date.year == now.year,
+                        date.month == now.month,
+                        date.day == (now - datetime.timedelta(days=1)).day])
+        if today:
+            time = f"Сьогодні, о {date.hour}:{date.minute if date.minute > 9 else f'0{date.minute}'}"
+        elif yesterday:
+            time = f"Учора, о {date.hour}:{date.minute if date.minute > 9 else f'0{date.minute}'}"
+        else:
+            time = f"{date.month if date.month > 9 else f'0{date.month}'}.{date.day if date.day > 9 else f'0{date.day}'}.{date.year}"
+
+        return time
+
+    async def get_user_gigs(self, telegram_id: int) -> List[GigMessage]:
         response = await UserAPI.get_user(telegram_id=telegram_id)
-        # if response.success:
+        if response._success:
+            response_messages: list = []
+
+            user = BaseUser().model_validate(response.data)
+            active_gigs = dict(sorted(user.gigs.active.items(), key=lambda x: x[1]["data"]["date"], reverse=True))
+            for i, v in active_gigs.items():
+                message_data: GigMessage = GigMessage()
+                gig = BaseGig().model_validate(v)
+                time = self.test_date(timestamp=gig.data.date)
+                message_data.telegram_id = gig.telegram_id
+                message_data.id = gig.id
+                message_data.text: str = f"{gig.data.name}\n\n" \
+                                         f"" \
+                                         f"📍 *{gig.data.location.data.name}*\n" \
+                                         f"⌚ *{time}*"
+                print(message_data)
+                response_messages.append(message_data)
+            return response_messages
+        return None
+
+# import asyncio
+# m = Marketplace()
+#
+# r = asyncio.run(m.get_user_gigs(telegram_id=1125858430))
+# print(r)
+
+
+
+
 
