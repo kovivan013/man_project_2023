@@ -1,6 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
 
+from man_project_2023.utils.debug.errors_reporter import Reporter
+
 from routers import api_router
 from config import settings
 
@@ -13,6 +15,8 @@ def get_application():
 
 
 app = get_application()
+
+Reporter.api_reporter(app)
 
 if __name__ == "__main__":
     uvicorn.run(

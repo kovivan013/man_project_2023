@@ -152,7 +152,7 @@ class Filters:
     def dashboard_filter(cls) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
 
-        by_active: str = "Активні оголошення (0) ▼"
+        by_active: str = "Активні оголошення ▼"
 
         keyboard.add(
             InlineKeyboardButton(text=by_active,

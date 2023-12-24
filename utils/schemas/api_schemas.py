@@ -1,6 +1,8 @@
 from pydantic import BaseModel
 from typing import List, Dict
 
+from enum import Enum
+
 from man_project_2023.api.utils.utils import Utils
 
 class Defaults:
@@ -64,6 +66,11 @@ class BaseGig(BaseModel, Defaults):
     status: int = 0
     data: GigData = GigData()
 
+class GigsEnum(Enum):
+    active: str = "active"
+    completed: str = "completed"
+    archived: str = "archived"
+    pending: str = "pending"
 
 class UserCreate(BaseModel, Defaults):
     telegram_id: int = 0

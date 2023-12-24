@@ -50,9 +50,16 @@ class UserAPI(API):
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod
-    async def get_user_data(cls, telegram_id: int) -> 'DataStructure':
-        user = await cls.get_user(telegram_id=telegram_id)
-        return user.data["user_data"]
+    async def get_user_gigs(cls, telegram_id: int, limit: int = 1,
+                            page: int = 1, type: str = "active") -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs?limit={limit}&page={page}&type={type}")
+        return await cls._get_request(endpoint=endpoint)
+
+    @classmethod
+    async def get_gigs(cls, limit: int = 1,
+                       page: int = 1, type: str = "active"):
+        endpoint: str = cls.__prefix(f"/gigs/?limit={limit}&page={page}&type={type}")
+        return await cls._get_request(endpoint=endpoint)
 
     @classmethod
     async def update_description(cls, data: dict) -> 'DataStructure':
@@ -92,9 +99,14 @@ class LocationAPI(API):
 
 
 # import asyncio
-# r = asyncio.run(UserAPI.get_user(telegram_id=1125858430))
-# print(r.as_dict())
-#
+# r = asyncio.run(UserAPI.get_user_gigs(telegram_id=1125858430))
+# print(r)
+# print(r.model_dump())
+# import asyncio
+# r = asyncio.run(UserAPI.get_gigs(type="co"))
+# print(r)
+# print(r.model_dump())
+
 # resp = asyncio.run(UserAPI.create_gig(telegram_id=1,
 #                                       mode=1,
 #                                       name="dfgeg",

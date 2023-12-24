@@ -385,13 +385,20 @@ class ContextManager:
         self.is_used = False
 
 
+
+class DropdownManager:
+    pass
+
+
+
 class Marketplace:
     """
     Класс который обеспечивает работу системы поиска проекта, также все функции связанные с собственными объявлениями пользователя
     Функции фильтров и прочего
     """
 
-    def test_date(self, timestamp: int):
+    @staticmethod
+    def date(timestamp: int):
         now = utils.now(timestamp=False)
         date = datetime.datetime.fromtimestamp(timestamp)
         today = all([date.year == now.year,
@@ -400,41 +407,56 @@ class Marketplace:
         yesterday = all([date.year == now.year,
                         date.month == now.month,
                         date.day == (now - datetime.timedelta(days=1)).day])
+        timing = f"{date.hour}:{date.minute if date.minute > 9 else f'0{date.minute}'}"
         if today:
-            time = f"Сьогодні, о {date.hour}:{date.minute if date.minute > 9 else f'0{date.minute}'}"
+            time = f"Сьогодні, о {timing}"
         elif yesterday:
-            time = f"Учора, о {date.hour}:{date.minute if date.minute > 9 else f'0{date.minute}'}"
+            time = f"Учора, о {timing}"
         else:
-            time = f"{date.month if date.month > 9 else f'0{date.month}'}.{date.day if date.day > 9 else f'0{date.day}'}.{date.year}"
+            time = f"{date.day if date.day > 9 else f'0{date.day}'}.{date.month if date.month > 9 else f'0{date.month}'}.{date.year}"
 
         return time
 
-    async def get_user_gigs(self, telegram_id: int) -> List[GigMessage]:
-        response = await UserAPI.get_user(telegram_id=telegram_id)
+    async def get_gigs(self, telegram_id: int = 0,
+                       limit: int = 5,
+                       page: int = 1,
+                       type: str = "active") -> List[GigMessage]:
+        if telegram_id:
+            response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
+                                                   limit=limit,
+                                                   page=page,
+                                                   type=type)
+        elif not telegram_id:
+            response = await UserAPI.get_gigs(limit=limit,
+                                              page=page,
+                                              type=type)
         if response._success:
             response_messages: list = []
 
-            user = BaseUser().model_validate(response.data)
-            active_gigs = dict(sorted(user.gigs.active.items(), key=lambda x: x[1]["data"]["date"], reverse=True))
-            for i, v in active_gigs.items():
+            gigs = response.data
+            sorted_gigs = dict(sorted(gigs.items(), key=lambda x: x[1]["data"]["date"], reverse=True))
+
+            for i, v in sorted_gigs.items():
                 message_data: GigMessage = GigMessage()
                 gig = BaseGig().model_validate(v)
-                time = self.test_date(timestamp=gig.data.date)
+                time = self.date(timestamp=gig.data.date)
                 message_data.telegram_id = gig.telegram_id
                 message_data.id = gig.id
                 message_data.text: str = f"{gig.data.name}\n\n" \
                                          f"" \
                                          f"📍 *{gig.data.location.data.name}*\n" \
                                          f"⌚ *{time}*"
-                print(message_data)
                 response_messages.append(message_data)
             return response_messages
         return None
 
+    async def send_gigs(self, limit: int = 5):
+        gigs = await self.get_user_gigs()
+
 # import asyncio
 # m = Marketplace()
 #
-# r = asyncio.run(m.get_user_gigs(telegram_id=1125858430))
+# r = asyncio.run(m.get_gigs(telegram_id=1125858430, limit=1))
 # print(r)
 
 

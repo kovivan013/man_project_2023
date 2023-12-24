@@ -36,13 +36,13 @@ class RequestSender(ABC):
         result = DataStructure(**answer.data)
         result.data = answer.data["data"] if "data" in answer.data else answer.data
 
-        if answer.status not in range(200, 300):
-            error_text: dict = {
-                "status": answer.status,
-                "url": self.url,
-                "data": answer.data
-            }
-            return error_text
+        # if answer.status not in range(200, 300):
+        #     error_text: dict = {
+        #         "status": answer.status,
+        #         "url": self.url,
+        #         "data": answer.data
+        #     }
+        #     return error_text
         return result
 
 class GetRequest(RequestSender):

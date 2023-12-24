@@ -159,8 +159,8 @@ class MyProfileMH:
         await contextManager.edit(current_state=cls.current_state,
                                   image="dashboard_profile",
                                   reply_markup=kb)
-        gigs = await cls.marketplace.get_user_gigs(telegram_id=state.user)
         if not await contextManager.states_equals():
+            gigs = await cls.marketplace.get_gigs(telegram_id=state.user)
             for gig in gigs:
                 await contextManager.appent_delete_list(
                     await bot.send_photo(chat_id=gig.telegram_id,
@@ -390,12 +390,12 @@ class CreateGig:
         city = await LocationStructure(location=address.data).get_city(with_type=True)
 
         location.update(data=city)
-        cls.data_for_send.data.location = location
+        cls.data_for_send.data.location = cls.data_for_send.data.location.model_copy().model_validate(location)
         cls.data_for_send.data.address = address.data
 
         await message.delete()
 
-        edited_message = await contextManager.edit(text=f"Ви вказали: *{' '.join(city.values())}*\n\n"
+        edited_message = await contextManager.edit(text=f"Ви обрали *{' '.join(city.values())}*\n\n"
                                                         f""
                                                         f"👆 Натисніть *\"Далі\"* або відправте локацію *іншого місця*:",
                                                    image="dashboard_profile",
@@ -458,7 +458,7 @@ class CreateGig:
         cls.data_for_send.data.tags = cls.list_menu_manager.elements_list
         async with state.proxy() as data:
             file_id = data["file_id"]
-        address = await LocationStructure(location=cls.data_for_send.data.address).get_city(with_type=True)
+        address = cls.data_for_send.data.location.data.name
         date = utils.date(timestamp=cls.data_for_send.data.date)
 
         n = "\n"
@@ -467,7 +467,7 @@ class CreateGig:
                f"Назва: *{cls.data_for_send.data.name}*\n"\
                f"Опис: *{cls.data_for_send.data.description}*\n"\
                f"Дата: *{date}*\n"\
-               f"Місце: *{' '.join(address.values())}*\n"\
+               f"Місце: *{address}*\n"\
                f"{'Теги: *#*' + ' *#*'.join(cls.data_for_send.data.tags) + f'{n}{n}' if cls.data_for_send.data.tags else n}"\
                f""\
                f"*Публікуємо оголошення?*"
