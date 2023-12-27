@@ -255,11 +255,18 @@ class ListMenu(YesOrNo, Controls):
 
 
 class MainMenu:
+
+    add_gig: str = f"➕ Додати оголошення"
+    search: str = f"🔍 Знайти річ"
+
     change_mode: str = "Режим"
     profile: str = f"👤 Профіль"
     settings: str = f"⚙️ Налаштування"
     support: str = f"🆘 Підтримка"
     info_about: str = f"ℹ Про проект"
+
+    add_gig_callback: str = f"add_gig_callback"
+    search_callback: str = f"search_callback"
 
     change_mode_callback: str = f"change_mode_callback"
     profile_callback: str = f"profile_callback"
@@ -272,14 +279,26 @@ class MainMenu:
         keyboard = default_inline_keyboard()
 
         modes: dict = {
-            0: "🔦",
-            1: "🔍"
+            0: "Шукача 🔦",
+            1: "Детектива 🔍"
         }
 
         keyboard.add(
             InlineKeyboardButton(text=f"{cls.change_mode} {modes[mode]}",
                                  callback_data=cls.change_mode_callback)
         )
+
+        if mode:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.add_gig,
+                                     callback_data=cls.add_gig_callback)
+            )
+        else:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.search,
+                                     callback_data=cls.search_callback)
+            )
+
         keyboard.add(
             InlineKeyboardButton(text=cls.profile,
                                  callback_data=cls.profile_callback),
@@ -339,8 +358,8 @@ class MyProfile:
     update: str = f"🖊 Змінити"
     share: str = f"🔗 Поділитися"
 
-    update_callback: str = f"🖊 Змінити"
-    share_callback: str = f"🔗 Поділитися"
+    update_callback: str = f"update_callback"
+    share_callback: str = f"share_callback"
 
     @classmethod
     def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
@@ -429,6 +448,7 @@ class CreateGigMenu(YesOrNo):
             )
 
         return keyboard
+
 
 
 class CalendarMenu(Controls, YesOrNo):
@@ -553,3 +573,67 @@ class CalendarMenu(Controls, YesOrNo):
 
         return keyboard
 
+class GigContextMenu:
+
+    #TODO: плейсхолдер как и был налаштування, и в back Налаштування ▼, в маркетплейсе будет просто детальніше
+    # Также не забыть добавить обработку на то, твое ли то объявление
+
+    placeholder: str = "⚙️ Налаштування ▲"
+
+    back: str = f"▼"
+    detail: str = f"👉 Детальніше"
+    preview: str = f"🔍 Переглянути"
+    stop: str = f"🛑 Зупинити"
+    stats: str = f"📊 Статистика"
+    share: str = f"🔗 Поділитися"
+
+    placeholder_callback: str = f"_placeholder"
+    back_callback: str = f"back_callback"
+    detail_callback: str = f"_detail_callback"
+    preview_callback: str = f"_preview_callback"
+    stop_callback: str = f"_stop_callback"
+    stats_callback: str = f"_stats_callback"
+    share_callback: str = f"_share_callback"
+
+    @classmethod
+    def keyboard(cls, open: bool = False, telegram_id: int = 0, gig_id: int = 0) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        callback_value: str = f"{telegram_id}_{gig_id}"
+        if not open:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.placeholder,
+                                     callback_data=f"{callback_value}{cls.placeholder_callback}")
+            )
+
+            return keyboard
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.back,
+                                 callback_data=cls.back_callback)
+        )
+        keyboard.add(
+            InlineKeyboardButton(text=cls.preview,
+                                 callback_data=f"{callback_value}{cls.preview_callback}"),
+            InlineKeyboardButton(text=cls.stop,
+                                 callback_data=f"{callback_value}{cls.stop_callback}"),
+            InlineKeyboardButton(text=cls.stats,
+                                 callback_data=f"{callback_value}{cls.stats_callback}"),
+            InlineKeyboardButton(text=cls.share,
+                                 callback_data=f"{callback_value}{cls.share_callback}")
+        )
+
+        return keyboard
+
+    @classmethod
+    def m_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.detail,
+                                 callback_data=cls.detail_callback),
+            InlineKeyboardButton(text=cls.share,
+                                 callback_data=cls.share_callback)
+        )
+
+        return keyboard

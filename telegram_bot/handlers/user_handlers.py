@@ -19,7 +19,7 @@ from man_project_2023.telegram_bot.classes.utils_classes import (
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu
 )
 
 from man_project_2023.photos_database.handlers import PhotosDB
@@ -57,8 +57,6 @@ class RegisterMH:
 #                              reply_markup=MainMenu.seeker_keyboard())
 
 contextManager = ContextManager()
-photos_db = PhotosDB(bot=bot)
-
 
 class StartMH:
     current_state: CurrentState = CurrentState(keyboard_class=MainMenu,
@@ -72,7 +70,7 @@ class StartMH:
         user = BaseUser().model_validate(response.data)
 
         await contextManager.send_default(current_state=cls.current_state,
-                                          text=f"Вітаємо, *{user.username}*!",
+                                          text=f"👋 Вітаємо, *{user.username}*!",
                                           reply_markup=MainMenu.keyboard(),
                                           image="dashboard_profile")
 
@@ -93,14 +91,16 @@ class StartMH:
         #                      reply_markup=MainMenu.keyboard(),
         #                      parse_mode="Markdown")
 
+class MarketplaceMH:
+    current_state: CurrentState = CurrentState(keyboard_class=MainMenu,
+                                               state_class=MainMenuStates)
+
 
 class MyProfileMH:
 
     current_state: CurrentState = CurrentState(keyboard_class=MyProfile,
                                                state_class=ProfileStates)
     branchManager: BranchManager = BranchManager()
-    marketplace: Marketplace = Marketplace()
-
 
     @classmethod
     async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -160,16 +160,19 @@ class MyProfileMH:
                                   image="dashboard_profile",
                                   reply_markup=kb)
         if not await contextManager.states_equals():
-            gigs = await cls.marketplace.get_gigs(telegram_id=state.user)
-            for gig in gigs:
-                await contextManager.appent_delete_list(
-                    await bot.send_photo(chat_id=gig.telegram_id,
-                                         photo=InputFile(photos_db.get(telegram_id=gig.telegram_id,
-                                                                       gig_id=gig.id)),
-                                         caption=gig.text,
-                                         reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-                                         parse_mode="Markdown")
-                )
+            await Marketplace.send_gigs(context_manager=contextManager,
+                                        telegram_id=state.user,
+                                        limit=3)
+            # gigs = await Marketplace.get_gigs(telegram_id=state.user)
+            # for gig in gigs:
+            #     await contextManager.appent_delete_list(
+            #         await bot.send_photo(chat_id=gig.telegram_id,
+            #                              photo=InputFile(photos_db.get(telegram_id=gig.telegram_id,
+            #                                                            gig_id=gig.id)),
+            #                              caption=gig.text,
+            #                              reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
+            #                              parse_mode="Markdown")
+            #     )
             # preview = open('img/423.png', 'rb')
             # await contextManager.appent_delete_list(
             #     await bot.send_photo(chat_id=state.chat,
@@ -458,7 +461,7 @@ class CreateGig:
         cls.data_for_send.data.tags = cls.list_menu_manager.elements_list
         async with state.proxy() as data:
             file_id = data["file_id"]
-        address = cls.data_for_send.data.location.data.name
+        address = cls.data_for_send.data.location.data
         date = utils.date(timestamp=cls.data_for_send.data.date)
 
         n = "\n"
@@ -467,7 +470,7 @@ class CreateGig:
                f"Назва: *{cls.data_for_send.data.name}*\n"\
                f"Опис: *{cls.data_for_send.data.description}*\n"\
                f"Дата: *{date}*\n"\
-               f"Місце: *{address}*\n"\
+               f"Місце: *{address.type} {address.name}*\n"\
                f"{'Теги: *#*' + ' *#*'.join(cls.data_for_send.data.tags) + f'{n}{n}' if cls.data_for_send.data.tags else n}"\
                f""\
                f"*Публікуємо оголошення?*"
@@ -487,11 +490,12 @@ class CreateGig:
         response_data = BaseGig().model_validate(response.data)
         async with state.proxy() as data:
             file_id = data["file_id"]
-        await photos_db.save(telegram_id=cls.data_for_send.telegram_id,
+        await PhotosDB.save(telegram_id=cls.data_for_send.telegram_id,
                              file_id=file_id,
                              gig_id=response_data.id)
 
-        if response.status in range(200, 300):
+
+        if response._success:
             await callback.answer(text=f"✅ Успішно!",
                                   show_alert=True)
         else:
@@ -511,6 +515,10 @@ class CreateGig:
             return
         await CreateGigStates.backward.set()
         await cls.branch_manager.edit()
+
+
+class GigPreviewMH:
+    pass
 
 
 def register_user_handlers(dp: Dispatcher) -> None:
@@ -652,4 +660,10 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         CreateGig.select_date.move_bacward, Text(equals=Controls.backward_callback), state=CreateGigStates.date
+    )
+    dp.register_callback_query_handler(
+        Marketplace.keyboard_control, Text(endswith=GigContextMenu.placeholder_callback), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        Marketplace.keyboard_control, Text(equals=GigContextMenu.back_callback), state=ProfileStates.gigs
     )

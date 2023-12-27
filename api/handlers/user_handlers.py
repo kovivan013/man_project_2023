@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum
+from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum
 from man_project_2023.utils.debug import exceptions
 from man_project_2023.utils.debug.errors_reporter import Reporter
 from man_project_2023.api.utils.utils import Utils
@@ -102,8 +102,77 @@ def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsE
     if all_gigs:
         end = limit * page
         start = end - limit
-        _data_for_update = all_gigs[start:end]
-        [result.data.update(i) for i in _data_for_update]
+        [result.data.update(i) for i in all_gigs]
+        sorted_gigs = Utils.sort_by(obj=result.data,
+                                    path=["data", "date"])
+        result.data.clear()
+        for i, v in enumerate(sorted_gigs.items()):
+            if i in range(start, end):
+                gig_id, data = v
+                result.data.update({
+                    gig_id: data
+                })
+
+
+    result._status = status.HTTP_200_OK
+
+    return result
+
+@user_router.get("/v2/gigs/")
+def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_date: DateEnum = Query(default=DateEnum.latest),
+             type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):
+    result = DataStructure()
+    # users = db.query(User).all()
+    gigs = db.query(User.gigs).all()
+    all_gigs: list = []
+    # for i in users:
+    #     user = BaseUser().model_validate(i.as_dict())
+    #     if active := user.gigs.active:
+    #         for j, k in active.items():
+    #             result.data.update({
+    #                 j: k
+    #             })
+    for i in gigs:
+        user = BaseUser().gigs.model_validate(i[0])
+        if values := getattr(user, f"{type.value}"):
+            for j, k in values.items():
+
+                gig = BaseGig().model_validate(k)
+                if gig.data.name.lower() in title.lower():
+                    all_gigs.append({
+                        j: k
+                    })
+                else:
+                    for i in gig.data.tags:
+                        if i.lower() in title.lower():
+                            all_gigs.append({
+                                j: k
+                            })
+
+    if city:
+        sorted_gigs: list = []
+        for i in all_gigs:
+            data  = BaseGig().model_validate(list(i.values())[0])
+            if data.data.location.data.name.lower() in city.lower():
+                sorted_gigs.append(i)
+        all_gigs = sorted_gigs
+
+    if all_gigs:
+        end = limit * page
+        start = end - limit
+        [result.data.update(i) for i in all_gigs]
+
+        sorted_gigs = Utils.sort_by(obj=result.data,
+                                    path=["data", "date"],
+                                    reverse=from_date._value)
+        result.data.clear()
+        for i, v in enumerate(sorted_gigs.items()):
+            if i in range(start, end):
+                gig_id, data = v
+                result.data.update({
+                    gig_id: data
+                })
+
 
     result._status = status.HTTP_200_OK
 
@@ -166,8 +235,18 @@ def get_user_gigs(telegram_id: int,
     if all_gigs:
         end = limit * page
         start = end - limit
-        _data_for_update = all_gigs[start:end]
-        [result.data.update(i) for i in _data_for_update]
+        [result.data.update(i) for i in all_gigs]
+        sorted_gigs = Utils.sort_by(obj=result.data,
+                                    path=["data", "date"])
+        result.data.clear()
+        for i, v in enumerate(sorted_gigs.items()):
+            if i in range(start, end):
+                gig_id, data = v
+                result.data.update({
+                    gig_id: data
+                })
+        # _data_for_update = all_gigs[start:end]
+        # result.data = sorted_gigs
 
     result._status = status.HTTP_200_OK
 

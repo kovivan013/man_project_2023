@@ -1,53 +1,59 @@
 import os
 from aiogram.types import Message
-from man_project_2023.telegram_bot.config import Bot
+from man_project_2023.telegram_bot.config import Bot, bot
 
 BASE_DIR = "database"
 
 class PhotosDB:
 
-    def __init__(self, bot: Bot):
-        self.bot = bot
-        self.__BASE_DIR = self.join(base_dir=os.path.dirname(os.path.abspath(__file__)), dir="database")
+    # def __init__(self, bot: Bot = bot):
+    #     self.bot = bot
+    #     self.__BASE_DIR = self.join(base_dir=os.path.dirname(os.path.abspath(__file__)), dir="database")
 
-    def join(self, base_dir, dir, absolute_path: bool = False):
+    @staticmethod
+    def join(base_dir, dir, absolute_path: bool = False):
         path = os.path.join(base_dir.__str__(), dir.__str__())
         if absolute_path:
             return os.path.abspath(path)
         return path
 
-    async def register(self, telegram_id: int):
-        user = self.join(self.__BASE_DIR, telegram_id)
-        gigs = self.join(user, "gigs")
-        profile = self.join(user, "profile")
+    __BASE_DIR = join(base_dir=os.path.dirname(os.path.abspath(__file__)), dir="database")
+
+    @classmethod
+    async def register(cls, telegram_id: int):
+        user = cls.join(cls.__BASE_DIR, telegram_id)
+        gigs = cls.join(user, "gigs")
+        profile = cls.join(user, "profile")
 
         os.makedirs(user)
         os.makedirs(gigs)
         os.makedirs(profile)
 
-    async def delete(self, telegram_id: int):
-        user = self.join(self.__BASE_DIR, telegram_id)
+    @classmethod
+    async def delete(cls, telegram_id: int):
+        user = cls.join(cls.__BASE_DIR, telegram_id)
         os.removedirs(user)
 
+    @classmethod
+    async def save(cls, telegram_id: int, file_id: str, gig_id: str):
+        photo_path = await bot.get_file(file_id=file_id)
+        user = cls.join(cls.__BASE_DIR, telegram_id)
+        gigs = cls.join(user, "gigs")
 
-    async def save(self, telegram_id: int, file_id: str, gig_id: str):
-        photo_path = await self.bot.get_file(file_id=file_id)
-        user = self.join(self.__BASE_DIR, telegram_id)
-        gigs = self.join(user, "gigs")
-
-        gig = self.join(gigs, gig_id)
+        gig = cls.join(gigs, gig_id)
         os.makedirs(gig, exist_ok=True)
 
-        save_path = self.join(gig, "preview.jpg", absolute_path=True)
+        save_path = cls.join(gig, "preview.jpg", absolute_path=True)
         print(photo_path.file_path)
-        await self.bot.download_file(photo_path.file_path,
+        await bot.download_file(photo_path.file_path,
                                      save_path)
 
-    def get(self, telegram_id: int, gig_id: str):
-        user = self.join(self.__BASE_DIR, telegram_id, absolute_path=True)
-        gigs = self.join(user, "gigs")
+    @classmethod
+    def get(cls, telegram_id: int, gig_id: str):
+        user = cls.join(cls.__BASE_DIR, telegram_id, absolute_path=True)
+        gigs = cls.join(user, "gigs")
 
-        gig = self.join(gigs, gig_id)
+        gig = cls.join(gigs, gig_id)
         print(gig)
         return open(f"{gig}\preview.jpg", "rb")
 

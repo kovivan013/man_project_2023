@@ -7,10 +7,7 @@ from man_project_2023.telegram_bot.config import bot
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu
-)
-from man_project_2023.telegram_bot.keyboards.keyboards import (
-    CalendarMenu, InlineKeyboardMarkup, DropdownMenu
+    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu
 )
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
@@ -396,6 +393,8 @@ class Marketplace:
     Класс который обеспечивает работу системы поиска проекта, также все функции связанные с собственными объявлениями пользователя
     Функции фильтров и прочего
     """
+    on_page_gigs: list = []
+    open_id: int = 0
 
     @staticmethod
     def date(timestamp: int):
@@ -417,7 +416,8 @@ class Marketplace:
 
         return time
 
-    async def get_gigs(self, telegram_id: int = 0,
+    @classmethod
+    async def get_gigs(cls, telegram_id: int = 0,
                        limit: int = 5,
                        page: int = 1,
                        type: str = "active") -> List[GigMessage]:
@@ -434,12 +434,11 @@ class Marketplace:
             response_messages: list = []
 
             gigs = response.data
-            sorted_gigs = dict(sorted(gigs.items(), key=lambda x: x[1]["data"]["date"], reverse=True))
 
-            for i, v in sorted_gigs.items():
+            for i, v in gigs.items():
                 message_data: GigMessage = GigMessage()
                 gig = BaseGig().model_validate(v)
-                time = self.date(timestamp=gig.data.date)
+                time = cls.date(timestamp=gig.data.date)
                 message_data.telegram_id = gig.telegram_id
                 message_data.id = gig.id
                 message_data.text: str = f"{gig.data.name}\n\n" \
@@ -450,15 +449,69 @@ class Marketplace:
             return response_messages
         return None
 
-    async def send_gigs(self, limit: int = 5):
-        gigs = await self.get_user_gigs()
+    @classmethod
+    async def send_gigs(cls, context_manager: ContextManager,
+                        telegram_id: int = 0, limit: int = 5, page: int = 1,
+                        type: str = "active", from_saved: bool = False):
+        #TODO: Контекстный менеджер обновить и все загнать в статик и класс метод
+        if from_saved:
+            gigs = cls.on_page_gigs
+        else:
+            gigs = await cls.get_gigs(telegram_id=telegram_id,
+                                      limit=limit,
+                                      page=page,
+                                      type=type)
+            cls.on_page_gigs = gigs
 
+        for gig in gigs:
+            await context_manager.appent_delete_list(
+                await bot.send_photo(chat_id=gig.telegram_id,
+                                     photo=InputFile(PhotosDB.get(telegram_id=gig.telegram_id,
+                                                                  gig_id=gig.id)),
+                                     caption=gig.text,
+                                     reply_markup=GigContextMenu.keyboard(telegram_id=gig.telegram_id,
+                                                                          gig_id=gig.id),
+                                     parse_mode="Markdown",
+                                     disable_notification=True)
+            )
+
+    @classmethod
+    async def keyboard_control(cls, callback: CallbackQuery, state: FSMContext):
+        if callback.data == GigContextMenu.back_callback:
+            await callback.message.edit_reply_markup(
+                reply_markup=GigContextMenu.keyboard()
+            )
+            cls.open_id = 0
+
+        if callback.data.endswith(GigContextMenu.placeholder_callback):
+            value: str = callback.data[:callback.data.rindex(GigContextMenu.placeholder_callback)]
+            if cls.open_id:
+                try:
+                    await bot.edit_message_reply_markup(
+                        chat_id=state.chat,
+                        message_id=cls.open_id,
+                        reply_markup=GigContextMenu.keyboard()
+                    )
+                except:
+                    cls.open_id = 0
+
+            telegram_id, gig_id = tuple(value.split("_"))
+            await callback.message.edit_reply_markup(
+                reply_markup=GigContextMenu.keyboard(open=True,
+                                                     telegram_id=telegram_id,
+                                                     gig_id=gig_id)
+            )
+            cls.open_id = callback.message.message_id
+
+
+
+
+#
 # import asyncio
 # m = Marketplace()
-#
-# r = asyncio.run(m.get_gigs(telegram_id=1125858430, limit=1))
+# r = asyncio.run(m.get_gigs(telegram_id=1125858430, limit=2, page=1))
 # print(r)
-
+#
 
 
 

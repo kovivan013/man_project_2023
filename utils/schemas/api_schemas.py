@@ -41,14 +41,17 @@ class BaseUser(BaseModel, Defaults):
     user_data: UserData = UserData()
     gigs: UserGigs = UserGigs()
 
+
 class Town(BaseModel):
     type: str = ""
     name: str = ""
+
 
 class Location(BaseModel):
     latitude: float = 0.0
     longitude: float = 0.0
     data: Town = Town()
+
 
 class GigData(BaseModel):
     name: str = ""
@@ -66,11 +69,27 @@ class BaseGig(BaseModel, Defaults):
     status: int = 0
     data: GigData = GigData()
 
+
 class GigsEnum(Enum):
     active: str = "active"
     completed: str = "completed"
     archived: str = "archived"
     pending: str = "pending"
+
+
+class DateEnum(Enum):
+    oldest: str = "oldest"
+    latest: str = "latest"
+
+    @property
+    def _value(self):
+        return self.value
+
+    @_value.getter
+    def _value(self):
+        return True if self.value == self.latest.value else False
+
+
 
 class UserCreate(BaseModel, Defaults):
     telegram_id: int = 0
