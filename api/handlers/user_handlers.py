@@ -78,7 +78,7 @@ def get_all_users(response: Response, db: Session = Depends(get_db)):
     return result
 
 
-@user_router.get("/gigs/")
+@user_router.get("/all_gigs/")
 def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):
     result = DataStructure()
     # users = db.query(User).all()
@@ -122,23 +122,18 @@ def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsE
 def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_date: DateEnum = Query(default=DateEnum.latest),
              type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):
     result = DataStructure()
-    # users = db.query(User).all()
     gigs = db.query(User.gigs).all()
     all_gigs: list = []
-    # for i in users:
-    #     user = BaseUser().model_validate(i.as_dict())
-    #     if active := user.gigs.active:
-    #         for j, k in active.items():
-    #             result.data.update({
-    #                 j: k
-    #             })
+
     for i in gigs:
         user = BaseUser().gigs.model_validate(i[0])
         if values := getattr(user, f"{type.value}"):
             for j, k in values.items():
-
                 gig = BaseGig().model_validate(k)
-                if gig.data.name.lower() in title.lower():
+                # if gig.mode: # парсить только то, что нашел детектив в своем моде (1)
+                #TODO: сделать при подключении модов в сервисе
+                name = gig.data.name.lower()
+                if name in title.lower() or title.lower() in name:
                     all_gigs.append({
                         j: k
                     })
@@ -148,11 +143,12 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
                             all_gigs.append({
                                 j: k
                             })
+                            break
 
     if city:
         sorted_gigs: list = []
         for i in all_gigs:
-            data  = BaseGig().model_validate(list(i.values())[0])
+            data = BaseGig().model_validate(list(i.values())[0])
             if data.data.location.data.name.lower() in city.lower():
                 sorted_gigs.append(i)
         all_gigs = sorted_gigs
@@ -161,7 +157,6 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
         end = limit * page
         start = end - limit
         [result.data.update(i) for i in all_gigs]
-
         sorted_gigs = Utils.sort_by(obj=result.data,
                                     path=["data", "date"],
                                     reverse=from_date._value)
@@ -214,8 +209,10 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
 
 @user_router.get("/{telegram_id}/gigs")
 def get_user_gigs(telegram_id: int,
+                  city: str = "",
                   limit: int = 1,
                   page: int = 1,
+                  from_date: DateEnum = Query(default=DateEnum.latest),
                   type: GigsEnum = Query(default=GigsEnum.active),
                   db: Session = Depends(get_db)):
     result = DataStructure()
@@ -232,12 +229,21 @@ def get_user_gigs(telegram_id: int,
                 i: v
             })
 
+    if city:
+        sorted_gigs: list = []
+        for i in all_gigs:
+            data = BaseGig().model_validate(list(i.values())[0])
+            if data.data.location.data.name.lower() in city.lower():
+                sorted_gigs.append(i)
+        all_gigs = sorted_gigs
+
     if all_gigs:
         end = limit * page
         start = end - limit
         [result.data.update(i) for i in all_gigs]
         sorted_gigs = Utils.sort_by(obj=result.data,
-                                    path=["data", "date"])
+                                    path=["data", "date"],
+                                    reverse=from_date._value)
         result.data.clear()
         for i, v in enumerate(sorted_gigs.items()):
             if i in range(start, end):

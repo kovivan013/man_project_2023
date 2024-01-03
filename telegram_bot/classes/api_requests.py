@@ -50,15 +50,17 @@ class UserAPI(API):
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod
-    async def get_user_gigs(cls, telegram_id: int, limit: int = 1,
-                            page: int = 1, type: str = "active") -> 'DataStructure':
-        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs?limit={limit}&page={page}&type={type}")
+    async def get_user_gigs(cls, telegram_id: int, city: str = "", limit: int = 1,
+                            page: int = 1, from_date: str = "latest", type: str = "active") -> 'DataStructure':
+        # endpoint: str = cls.__prefix(f"/{telegram_id}/gigs?limit={limit}&page={page}&type={type}")
+        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs{f'?city={city}&' if city else '?'}limit={limit}&page={page}&from_date={from_date}&type={type}")
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod
-    async def get_gigs(cls, limit: int = 1,
-                       page: int = 1, type: str = "active"):
-        endpoint: str = cls.__prefix(f"/gigs/?limit={limit}&page={page}&type={type}")
+    async def get_gigs(cls, request: str, city: str = "", limit: int = 1,
+                       page: int = 1, from_date: str = "latest", type: str = "active"):
+        # endpoint: str = cls.__prefix(f"/gigs/?limit={limit}&page={page}&type={type}")
+        endpoint: str = cls.__prefix(f"/v2/gigs/?title={request}{f'&city={city}' if city else ''}&limit={limit}&page={page}&from_date={from_date}&type={type}")
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod

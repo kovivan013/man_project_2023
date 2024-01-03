@@ -1,6 +1,8 @@
 import datetime
 from typing import List
 
+from man_project_2023.telegram_bot.config import dp, Dispatcher
+
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import InputMediaPhoto, InputFile
 from man_project_2023.telegram_bot.config import bot
@@ -277,6 +279,7 @@ class ContextManager:
 
     async def send_default(self, current_state: CurrentState, text: str,
                            image: str = "", reply_markup = None):
+
         self.current_state = current_state
         chat_id: int = self.current_state.state.chat
         if image:
@@ -417,19 +420,23 @@ class Marketplace:
         return time
 
     @classmethod
-    async def get_gigs(cls, telegram_id: int = 0,
-                       limit: int = 5,
-                       page: int = 1,
-                       type: str = "active") -> List[GigMessage]:
-        if telegram_id:
-            response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
-                                                   limit=limit,
-                                                   page=page,
-                                                   type=type)
-        elif not telegram_id:
-            response = await UserAPI.get_gigs(limit=limit,
-                                              page=page,
-                                              type=type)
+    async def get_user_gigs(cls, telegram_id: int = 0,
+                            city: str = "",
+                            limit: int = 5,
+                            page: int = 1,
+                            from_date: str = "latest",
+                            type: str = "active") -> List[GigMessage]:
+        # if telegram_id:
+        response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
+                                               city=city,
+                                               limit=limit,
+                                               page=page,
+                                               from_date=from_date,
+                                               type=type)
+        # elif not telegram_id:
+        #     response = await UserAPI.get_gigs(limit=limit,
+        #                                       page=page,
+        #                                       type=type)
         if response._success:
             response_messages: list = []
 
@@ -450,18 +457,70 @@ class Marketplace:
         return None
 
     @classmethod
-    async def send_gigs(cls, context_manager: ContextManager,
-                        telegram_id: int = 0, limit: int = 5, page: int = 1,
-                        type: str = "active", from_saved: bool = False):
+    async def get_gigs(cls, request: str,
+                       city: str = "",
+                       limit: int = 5,
+                       page: int = 1,
+                       from_date: str = "latest",
+                       type: str = "active") -> List[GigMessage]:
+        response = await UserAPI.get_gigs(request=request,
+                                          city=city,
+                                          limit=limit,
+                                          page=page,
+                                          from_date=from_date,
+                                          type=type)
+        # if telegram_id:
+        #     response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
+        #                                            limit=limit,
+        #                                            page=page,
+        #                                            type=type)
+        # elif not telegram_id:
+        #     response = await UserAPI.get_gigs(limit=limit,
+        #                                       page=page,
+        #                                       type=type)
+        if response._success:
+            response_messages: list = []
+
+            gigs = response.data
+
+            for i, v in gigs.items():
+                message_data: GigMessage = GigMessage()
+                gig = BaseGig().model_validate(v)
+                time = cls.date(timestamp=gig.data.date)
+                message_data.telegram_id = gig.telegram_id
+                message_data.id = gig.id
+                message_data.text: str = f"{gig.data.name}\n\n" \
+                                         f"" \
+                                         f"📍 *{gig.data.location.data.name}*\n" \
+                                         f"⌚ *{time}*"
+                response_messages.append(message_data)
+            return response_messages
+        return None
+
+    @classmethod
+    async def send_gigs(cls, context_manager: ContextManager, request: str = "",
+                        telegram_id: int = 0, city: str = "", limit: int = 5, page: int = 1,
+                        from_date: str = "latest", type: str = "active", from_saved: bool = False):
         #TODO: Контекстный менеджер обновить и все загнать в статик и класс метод
-        if from_saved:
-            gigs = cls.on_page_gigs
-        else:
-            gigs = await cls.get_gigs(telegram_id=telegram_id,
+        if request:
+            gigs = await cls.get_gigs(request=request,
+                                      city=city,
                                       limit=limit,
                                       page=page,
+                                      from_date=from_date,
                                       type=type)
-            cls.on_page_gigs = gigs
+        elif telegram_id:
+            gigs = await cls.get_user_gigs(telegram_id=telegram_id,
+                                           city=city,
+                                           limit=limit,
+                                           page=page,
+                                           from_date=from_date,
+                                           type=type)
+        else:
+            if from_saved:
+                gigs = cls.on_page_gigs
+            else:
+                cls.on_page_gigs = gigs
 
         for gig in gigs:
             await context_manager.appent_delete_list(
@@ -504,14 +563,21 @@ class Marketplace:
             cls.open_id = callback.message.message_id
 
 
-
-
+# class StorageModel(BaseModel):
+#     context_manager: ContextManager = ContextManager()
+#     current_state: CurrentState = CurrentState()
+#     branch_manager: BranchManager = BranchManager()
 #
+#
+# class StateStorage:
+#     pass
+
+
 # import asyncio
 # m = Marketplace()
-# r = asyncio.run(m.get_gigs(telegram_id=1125858430, limit=2, page=1))
+# r = asyncio.run(m.get_user_gigs(telegram_id=1125858430, limit=2, page=1))
 # print(r)
-#
+
 
 
 

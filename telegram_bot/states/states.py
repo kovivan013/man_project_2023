@@ -6,6 +6,9 @@ from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu, Inli
 class MainMenuStates(StatesGroup):
     start_menu = State()
 
+class MarketplaceStates(StatesGroup):
+    search_input = State()
+
 class ProfileStates(StatesGroup):
     info_about = State()
     gigs = State()
@@ -33,14 +36,5 @@ class CreateGigStates(StatesGroup):
     tags = State()
     check_data = State()
     backward = State()
-
-    # @classmethod
-    # async def state_image(cls, path: str = "img/states_images/",
-    #                       mode: str = "rb"):
-    #     return open(path + "dashboard_profile", mode)
-
-
-    # tasks = State()
-    # in states (editing etc.)
 
 

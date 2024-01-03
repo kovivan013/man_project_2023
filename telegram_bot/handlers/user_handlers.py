@@ -11,7 +11,7 @@ from man_project_2023.telegram_bot.utils.utils import Utils
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
 from man_project_2023.telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
-    CreateGigStates, MainMenuStates, State
+    CreateGigStates, MainMenuStates, MarketplaceStates, State
 )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     Calendar, CurrentState, ContextManager, ListMenuManager,
@@ -19,7 +19,7 @@ from man_project_2023.telegram_bot.classes.utils_classes import (
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, SearchMenu
 )
 
 from man_project_2023.photos_database.handlers import PhotosDB
@@ -68,7 +68,8 @@ class StartMH:
         await MainMenuStates.start_menu.set()
         response = await UserAPI.get_user(telegram_id=state.user)
         user = BaseUser().model_validate(response.data)
-
+        print(state.storage)
+        print(state.storage.__dict__)
         await contextManager.send_default(current_state=cls.current_state,
                                           text=f"👋 Вітаємо, *{user.username}*!",
                                           reply_markup=MainMenu.keyboard(),
@@ -82,18 +83,29 @@ class StartMH:
                                                state_class=MainMenuStates)
         await cls.context_manager(message=callback.message,
                                   state=state)
-        # await contextManager.edit(current_state=cls.current_state,
-        #                           text=)
-        # response = await UserAPI.get_user(telegram_id=message.from_user.id)
-        # user = BaseUser().model_validate(response.data)
-        #
-        # await message.answer(text=f"Вітаємо, *{user.username}*!",
-        #                      reply_markup=MainMenu.keyboard(),
-        #                      parse_mode="Markdown")
+
 
 class MarketplaceMH:
     current_state: CurrentState = CurrentState(keyboard_class=MainMenu,
                                                state_class=MainMenuStates)
+
+    @classmethod
+    async def search(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await cls.current_state.set_state(state)
+        await MarketplaceStates.search_input.set()
+        await contextManager.edit(current_state=cls.current_state,
+                                  text="🔍 *Уведіть пошуковий запит:*",
+                                  image="dashboard_profile",
+                                  reply_markup=SearchMenu.keyboard(),
+                                  with_placeholder=False)
+
+    @classmethod
+    async def validate_request(cls, message: Message, state: FSMContext) -> None:
+        #TODO: request text validate
+        if request := message.text:
+            await Marketplace.send_gigs(context_manager=ContextManager,
+                                        request=request,
+                                        limit=3)
 
 
 class MyProfileMH:
@@ -119,6 +131,7 @@ class MyProfileMH:
 
     @classmethod
     async def info_about(cls, callback: CallbackQuery, state: FSMContext) -> None:
+
         await cls.current_state.update_classes(keyboard_class=MyProfile,
                                                state_class=MyProfile)
         await cls.current_state.set_state(state)
@@ -215,8 +228,8 @@ class MyProfileMH:
                                                state_class=ProfileStates)
         await ProfileStates.edit_menu.set()
         await contextManager.select(current_state=cls.current_state,
-                                          delete_messages=True,
-                                          reply_markup=UpdateProfile.keyboard())
+                                    delete_messages=True,
+                                    reply_markup=UpdateProfile.keyboard())
 
 
 class UpdateDescriptionMH:
@@ -531,6 +544,11 @@ def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(
         MyProfileMH.context_manager, commands=["profile"], state=None
     )
+
+    dp.register_callback_query_handler(
+        MarketplaceMH.search, Text(equals=MainMenu.search_callback), state=MainMenuStates.start_menu
+    )
+
     dp.register_callback_query_handler(
         MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.info_about
     )

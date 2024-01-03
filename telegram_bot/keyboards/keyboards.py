@@ -637,3 +637,26 @@ class GigContextMenu:
         )
 
         return keyboard
+
+class SearchMenu(Controls):
+
+    search: str = f"Пошук 🔦"
+
+    search_callback: str = f"search_callback"
+
+    @classmethod
+    def keyboard(cls, with_search: bool = False) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.backward,
+                                 callback_data=cls.backward_callback)
+        )
+
+        if with_search:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.search,
+                                     callback_data=cls.search_callback)
+            )
+
+        return keyboard
