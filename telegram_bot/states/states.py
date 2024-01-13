@@ -1,7 +1,6 @@
 from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.types import Message
-from man_project_2023.telegram_bot.keyboards.keyboards import DropdownMenu, InlineKeyboardMarkup
 
 class MainMenuStates(StatesGroup):
     start_menu = State()

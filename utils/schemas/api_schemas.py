@@ -5,13 +5,13 @@ from enum import Enum
 
 from man_project_2023.api.utils.utils import Utils
 
-class Defaults:
-    def default(self):
-        self.__annotations__ = self.model_dump()
-
-    @property
-    def defaults(self):
-        return self.__annotations__
+# class Defaults:
+#     def default(self):
+#         self.__annotations__ = self.model_dump()
+#
+#     @property
+#     def defaults(self):
+#         return self.__annotations__
 
 
 class Description(BaseModel):
@@ -34,7 +34,7 @@ class UserGigs(BaseModel):
     pending: dict = {}
 
 
-class BaseUser(BaseModel, Defaults):
+class BaseUser(BaseModel):
     telegram_id: int = 0
     username: str = ""
     mode: int = 0
@@ -62,7 +62,7 @@ class GigData(BaseModel):
     location: Location = Location()
 
 
-class BaseGig(BaseModel, Defaults):
+class BaseGig(BaseModel):
     telegram_id: int = 0
     id: str = ""
     mode: int = 0
@@ -87,22 +87,24 @@ class DateEnum(Enum):
 
     @_value.getter
     def _value(self):
-        return True if self.value == self.latest.value else False
+        return self.value == self.latest.value
 
 
 
-class UserCreate(BaseModel, Defaults):
+class UserCreate(BaseModel):
     telegram_id: int = 0
     username: str = ""
     user_data: Description = Description()
 
 
-class GigCreate(BaseModel, Defaults):
+class GigCreate(BaseModel):
     telegram_id: int = 0
     mode: int = 0
     data: GigData = GigData()
 
+# class UpdateUsername(BaseModel, Defaults, Storage):
+#     username: str = ""
 
-class UpdateDescription(BaseModel, Defaults):
+class UpdateDescription(BaseModel):
     telegram_id: int = 0
     user_data: Description = Description()

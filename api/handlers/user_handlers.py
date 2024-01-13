@@ -19,7 +19,6 @@ user_router = APIRouter()
 
 utils = Utils()
 
-
 @user_router.post("/create_user")
 def create_user(request_data: UserCreate, response: Response, request: Request, db: Session = Depends(get_db)):
     result = DataStructure()
