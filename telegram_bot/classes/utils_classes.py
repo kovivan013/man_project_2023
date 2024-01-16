@@ -12,7 +12,7 @@ from man_project_2023.telegram_bot.config import bot
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu
+    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
 )
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
@@ -497,6 +497,9 @@ class CurrentState(Storage):
         return photo
 
 
+current_state = CurrentState()
+
+
 class Calendar(CalendarMenu, Storage):
 
     _KEY = "calendar"
@@ -569,6 +572,9 @@ class Calendar(CalendarMenu, Storage):
         await self._save(state, storage)
 
 
+calendar_menu = Calendar()
+
+
 class ListMenuManager(Storage):
 
     _KEY = "list_menu_manager"
@@ -576,9 +582,13 @@ class ListMenuManager(Storage):
     def __init__(self, elements_list: list = []):
         self.elements_list = elements_list
 
-    async def _elements_list(self, state: FSMContext):
+    async def _elements_list(self, state: FSMContext, clear: bool = False):
         storage: self = await self._storage(state)
-        return storage.elements_list
+        elements = storage.elements_list
+        if clear:
+            storage.elements_list = []
+            await self._save(state, storage)
+        return elements
 
     async def add(self, state: FSMContext, message: Message) -> None:
         storage: self = await self._storage(state)
@@ -595,6 +605,13 @@ class ListMenuManager(Storage):
     async def remove(self, callback: CallbackQuery, state: FSMContext) -> None:
         storage: self = await self._storage(state)
         element = callback.data[:callback.data.rindex("_list_menu")]
+
+        # with_ready = False
+        # for i in callback.message.reply_markup.inline_keyboard:
+        #     for v in i:
+        #         if "with_ready" in v.callback_data:
+        #             with_ready = True
+
         if element in storage.elements_list:
             storage.elements_list.remove(element)
             await self._save(state, storage)
@@ -610,6 +627,9 @@ class ListMenuManager(Storage):
         storage: self = await self._storage(state)
         self.elements_list = []
         await self._save(state, storage)
+
+
+list_manager = ListMenuManager()
 
 
 class BranchManager(Storage):
@@ -673,6 +693,9 @@ class BranchManager(Storage):
             **storage.default_message["media"]
         ),
         reply_markup=storage.default_message["reply_markup"])
+
+
+branch_manager = BranchManager()
 
 
 class ContextManager(Storage):
@@ -836,11 +859,94 @@ class ContextManager(Storage):
         storage.previous_state = None
         await self._save(state, storage)
 
-current_state = CurrentState()
-calendar_menu = Calendar()
-list_manager = ListMenuManager()
-branch_manager = BranchManager()
+
 context_manager = ContextManager()
+
+
+class FiltersManager(Storage):
+
+    _KEY = "filters_manager"
+
+    def __init__(self, time: str = "latest", city: str = "all", tags: list = []):
+        self.time = time
+        self.city = city
+        self.tags = tags
+
+    async def filters_menu(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        await callback.message.edit_reply_markup(reply_markup=Filters.keyboard(time=storage.time,
+                                                                               city=storage.city,
+                                                                               tags=len(storage.tags)))
+        await context_manager.delete_context_messages(state)
+
+    async def time_filter(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        time: dict = {
+            "latest": "нових",
+            "oldest": "старих",
+        }
+        image = open('img/test35459468345687456.png', 'rb')
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=image,
+            caption=f"Починати з *{time[storage.time]}* оголошень:",
+            parse_mode="Markdown"
+        ),
+        reply_markup=Filters.time_keyboard(time=storage.time))
+
+    async def location_filter(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        time: dict = {
+            "latest": "нових",
+            "oldest": "старих",
+        }
+        image = open('img/test35459468345687456.png', 'rb')
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=image,
+            caption=f"Починати з *{time[storage.time]}* оголошень:",
+            parse_mode="Markdown"
+        ),
+        reply_markup=Filters.time_keyboard(time=storage.time))
+
+    async def tags_filter(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        image = open('img/test35459468345687456.png', 'rb')
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=image,
+            caption=f"❌ *Натисніть на тег, щоб видалити його.*",
+            parse_mode="Markdown"
+        ),
+        reply_markup=ListMenu.keyboard(elements_list=storage.tags,
+                                       with_ready=True)
+        )
+
+    async def add_tag(self, message: Message, state: FSMContext):
+        storage: self = await self._storage(state)
+        storage.tags.append(message.text)
+        await message.delete()
+        reply_markup = ListMenu.keyboard(elements_list=storage.tags,
+                                         with_ready=True)
+        await context_manager.edit(state=state,
+                                   text=f"❌ *Натисніть на тег, щоб видалити його.*",
+                                   reply_markup=reply_markup,
+                                   with_placeholder=False)
+        await self._save(state, storage)
+
+    async def remove_tag(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        element = callback.data[:callback.data.rindex("_list_menu")]
+
+        if element in storage.tags:
+            storage.tags.remove(element)
+            await self._save(state, storage)
+            await callback.message.edit_reply_markup(
+                reply_markup=ListMenu.keyboard(
+                    elements_list=storage.tags,
+                    with_ready=True
+                )
+            )
+
+
+filters_manager = FiltersManager()
 
 class DropdownManager:
     pass
@@ -896,7 +1002,7 @@ class Marketplace:
         if response._success:
             response_messages: list = []
 
-            gigs = response.data
+            gigs = response.data["gigs"]
 
             for i, v in gigs.items():
                 message_data: GigMessage = GigMessage()
@@ -937,7 +1043,7 @@ class Marketplace:
         if response._success:
             response_messages: list = []
 
-            gigs = response.data
+            gigs = response.data["gigs"]
 
             for i, v in gigs.items():
                 message_data: GigMessage = GigMessage()

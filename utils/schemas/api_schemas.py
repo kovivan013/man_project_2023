@@ -69,6 +69,11 @@ class BaseGig(BaseModel):
     status: int = 0
     data: GigData = GigData()
 
+class GigsResponse(BaseModel):
+    pages: int = 0
+    page: int = 0
+    next_page: int = 0
+    previous_page: int = 0
 
 class GigsEnum(Enum):
     active: str = "active"

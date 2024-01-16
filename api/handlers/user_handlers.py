@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum
+from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse
 from man_project_2023.utils.debug import exceptions
 from man_project_2023.utils.debug.errors_reporter import Reporter
 from man_project_2023.api.utils.utils import Utils
@@ -121,6 +121,8 @@ def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsE
 def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_date: DateEnum = Query(default=DateEnum.latest),
              type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):
     result = DataStructure()
+    document = GigsResponse()
+    response: dict = {}
     gigs = db.query(User.gigs).all()
     all_gigs: list = []
 
@@ -155,18 +157,24 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
     if all_gigs:
         end = limit * page
         start = end - limit
-        [result.data.update(i) for i in all_gigs]
-        sorted_gigs = Utils.sort_by(obj=result.data,
+        [response.update(i) for i in all_gigs]
+        sorted_gigs = Utils.sort_by(obj=response,
                                     path=["data", "date"],
                                     reverse=from_date._value)
-        result.data.clear()
+        response.clear()
+        result.data["gigs"] = {}
+
+        document.pages = len(sorted_gigs) // limit + 1
+        document.page = page
+
+        result.data["response"] = document
+
         for i, v in enumerate(sorted_gigs.items()):
             if i in range(start, end):
                 gig_id, data = v
-                result.data.update({
+                result.data["gigs"].update({
                     gig_id: data
                 })
-
 
     result._status = status.HTTP_200_OK
 
@@ -215,6 +223,8 @@ def get_user_gigs(telegram_id: int,
                   type: GigsEnum = Query(default=GigsEnum.active),
                   db: Session = Depends(get_db)):
     result = DataStructure()
+    document = GigsResponse()
+    response: dict = {}
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
 
     if user is None:
@@ -239,15 +249,21 @@ def get_user_gigs(telegram_id: int,
     if all_gigs:
         end = limit * page
         start = end - limit
-        [result.data.update(i) for i in all_gigs]
-        sorted_gigs = Utils.sort_by(obj=result.data,
+        [response.update(i) for i in all_gigs]
+        sorted_gigs = Utils.sort_by(obj=response,
                                     path=["data", "date"],
                                     reverse=from_date._value)
-        result.data.clear()
+        response.clear()
+        result.data["gigs"] = {}
+
+        document.pages = len(sorted_gigs) // limit + 1
+        document.page = page
+
+        result.data["response"] = document
         for i, v in enumerate(sorted_gigs.items()):
             if i in range(start, end):
                 gig_id, data = v
-                result.data.update({
+                result.data["gigs"].update({
                     gig_id: data
                 })
         # _data_for_update = all_gigs[start:end]

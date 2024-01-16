@@ -36,4 +36,8 @@ class CreateGigStates(StatesGroup):
     check_data = State()
     backward = State()
 
+class FiltersStates(StatesGroup):
+    time_filter = State()
+    location_filter = State()
+    tags_filter =State()
 

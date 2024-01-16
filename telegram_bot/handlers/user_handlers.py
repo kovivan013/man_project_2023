@@ -20,7 +20,7 @@ from man_project_2023.telegram_bot.states.states import (
 # )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
-    branch_manager, Marketplace, Storage
+    branch_manager, filters_manager, Marketplace, Storage
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
@@ -159,15 +159,10 @@ class MyProfileMH:
                                            keyboard_class=MyProfile,
                                            state_class=MyProfile)
         await ProfileStates.gigs.set()
-        kb = InlineKeyboardMarkup(row_width=2)
-        kb.add(InlineKeyboardButton(
-            text="Додати оголошення ➕",
-            callback_data="add_gig"
-        ))
         await context_manager.edit(state=state,
                                    current_state=current_state,
                                    image="dashboard_profile",
-                                   reply_markup=kb)
+                                   reply_markup=MyProfile.gigs_keyboard())
         if not await context_manager.states_equals(state):
             await Marketplace.send_gigs(state=state,
                                         telegram_id=state.user,
@@ -231,11 +226,6 @@ class MyProfileMH:
 
 
 class UpdateDescriptionMH:
-
-    # currentState: CurrentState = CurrentState(keyboard_class=UpdateProfile,
-    #                                           state_class=UpdateDescriptionStates)
-    # branchManager: BranchManager = BranchManager()
-    # data_for_send: UpdateDescription = None
 
     @classmethod
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -302,14 +292,6 @@ class UpdateUsernameMH:
 
 
 class CreateGig:
-
-    # current_state: CurrentState = CurrentState(keyboard_class=UpdateProfile,
-    #                                            state_class=CreateGigStates)
-    # branch_manager: BranchManager = BranchManager()
-    # list_menu_manager: ListMenuManager = ListMenuManager()
-    #
-    # data_for_send: GigCreate = None
-    # select_date = Calendar()
 
     @classmethod
     async def enter_name(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -496,7 +478,7 @@ class CreateGig:
 
     @classmethod
     async def add_tag(cls, message: Message, state: FSMContext) -> None:
-        reply_markup = await list_manager.add(state,
+        reply_markup = await list_manager.add(state=state,
                                               message=message)
         edited_message = await context_manager.edit(state=state,
                                                     text=f"❌ *Натисніть на тег, щоб видалити його.*\n\n"
@@ -511,7 +493,7 @@ class CreateGig:
     async def confirm_create(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await CreateGigStates.check_data.set()
         async with state.proxy() as data:
-            data["_payload"].data.tags = await list_manager._elements_list(state)
+            data["_payload"].data.tags = await list_manager._elements_list(state, clear=True)
             file_id = data["file_id"]
 
         _payload: GigCreate = await Storage._payload(state)
@@ -649,7 +631,29 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
 
     dp.register_callback_query_handler(
-        CreateGig.enter_name, Text(equals="add_gig"), state=ProfileStates.gigs
+        filters_manager.filters_menu, Text(equals=Filters.placeholder_callback), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        filters_manager.time_filter, Text(equals=Filters.time_callback), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        filters_manager.tags_filter, Text(equals=Filters.tags_callback), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        filters_manager.remove_tag, Text(endswith="_list_menu"), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        filters_manager.filters_menu, Text(equals=Filters.ready_callback), state=ProfileStates.gigs
+    )
+    dp.register_message_handler(
+        filters_manager.add_tag, state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.my_gigs, Text(equals=Filters.backward_callback), state=ProfileStates.gigs
+    )
+
+    dp.register_callback_query_handler(
+        CreateGig.enter_name, Text(equals=MyProfile.add_gig_callback), state=ProfileStates.gigs
     )
     dp.register_message_handler(
         CreateGig.check_name, state=CreateGigStates.name

@@ -12,7 +12,8 @@ def default_reply_keyboard(one_time_keyboard: bool = True,
     return ReplyKeyboardMarkup(
         one_time_keyboard=one_time_keyboard,
         resize_keyboard=resize_keyboard,
-        row_width=row_width
+        row_width=row_width,
+        input_field_placeholder="test"
     )
 
 
@@ -40,6 +41,7 @@ class YesOrNo:
     skip_callback: str = f"skip_callback"
     save_callback: str = f"save_callback"
     next_callback: str = "next_callback"
+
 
     @classmethod
     def keyboard(cls, is_inline_keyboard: bool = False):
@@ -144,19 +146,78 @@ class Controls:
 
 
 @dataclass(frozen=True)
-class Filters:
+class Filters(Controls, YesOrNo):
 
-    dashboard_callback: str = f"dashboard_filter_callback"
+    placeholder: str = f"🎛️ Фільтри ▶"
+
+    time: str = f"⏰ За часом"
+    city: str = f"📍 За місцем"
+    tags: str = f"🏷️ За тегами"
+
+    placeholder_callback: str = f"filters_placeholde_callback"
+    time_callback: str = f"time_callback"
+    city_callback: str = f"city_callback"
+    tags_callback: str = f"tags_callback"
 
     @classmethod
-    def dashboard_filter(cls) -> Union[InlineKeyboardMarkup]:
+    def keyboard(cls, time: str = "latest", city: str = "all",
+                 tags: int = 0, finish: bool = False) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
 
-        by_active: str = "Активні оголошення ▼"
+        _time: dict = {
+            "latest": ": Нові",
+            "oldest": ": Старі",
+        }
+
+        _city: dict = {
+            "all": "Усі"
+        }
 
         keyboard.add(
-            InlineKeyboardButton(text=by_active,
-                                 callback_data=cls.dashboard_callback)
+            InlineKeyboardButton(text=f"{cls.time}{_time[time]}",
+                                 callback_data=cls.time_callback),
+            InlineKeyboardButton(text=f"{cls.city}: {_city.get(city, city)}",
+                                 callback_data=cls.city_callback),
+            InlineKeyboardButton(text=f"{cls.tags}: {tags}",
+                                 callback_data=cls.tags_callback),
+        )
+
+        if finish:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.ready,
+                                     callback_data=cls.ready_callback)
+            )
+        else:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.backward,
+                                     callback_data=cls.backward_callback)
+            )
+
+        return keyboard
+
+    @classmethod
+    def time_keyboard(cls, time: str):
+        keyboard = default_inline_keyboard()
+
+        fields: list[InlineKeyboardButton] = [
+            InlineKeyboardButton(
+                text=f"▲ Нових",
+                callback_data="latest"
+            ),
+            InlineKeyboardButton(
+                text=f"▼ Старих",
+                callback_data="oldest"
+            )
+        ]
+
+        for i in fields:
+            if i.callback_data == time:
+                i.text = f"{i.text} ✅"
+
+        keyboard.row(*fields)
+        keyboard.add(
+            InlineKeyboardButton(text=cls.ready,
+                                 callback_data=cls.ready_callback)
         )
 
         return keyboard
@@ -214,8 +275,10 @@ class ListMenu(YesOrNo, Controls):
     """
     @classmethod
     def keyboard(cls, elements_list: list = [], callback: str = "",
-                 with_cancel: bool = True, with_skip: bool = False, with_next: bool = False) -> Union[InlineKeyboardMarkup]:
+                 with_cancel: bool = True, with_skip: bool = False,
+                 with_next: bool = False, with_ready: bool = False) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=4)
+
         if elements_list:
             for i, v in enumerate(elements_list, start=0):
                 if not i%3:
@@ -233,6 +296,13 @@ class ListMenu(YesOrNo, Controls):
                         InlineKeyboardButton(text=cls.minus,
                                              callback_data=f"{v}_remove_list_menu")
                     )
+
+        if with_ready:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.ready,
+                                     callback_data=cls.ready_callback)
+            )
+            return keyboard
 
         if with_cancel:
             keyboard.add(
@@ -345,7 +415,7 @@ class Navigation:
         pass
 
 
-class MyProfile:
+class MyProfile(Filters, MainMenu):
 
     def __init__(self):
         self.info_about: str = f"Про себе 🔓"
@@ -373,6 +443,21 @@ class MyProfile:
         )
 
         return keyboard
+
+    @classmethod
+    def gigs_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.placeholder,
+                                 callback_data=cls.placeholder_callback),
+            InlineKeyboardButton(text=cls.add_gig,
+                                 callback_data=cls.add_gig_callback)
+        )
+
+        return keyboard
+
+
 
 
 class UpdateProfile(Controls, YesOrNo):
