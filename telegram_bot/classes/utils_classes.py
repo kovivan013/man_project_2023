@@ -16,7 +16,7 @@ from man_project_2023.telegram_bot.keyboards.keyboards import (
 )
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
-from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser
+from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser, GigsResponse
 from man_project_2023.utils.schemas.schemas import GigMessage
 from man_project_2023.photos_database.handlers import PhotosDB
 from man_project_2023.telegram_bot.api.utils_schemas import StateStructure
@@ -836,10 +836,13 @@ class ContextManager(Storage):
 
     async def delete_context_messages(self, state: FSMContext):
         storage: self = await self._storage(state)
-        for message_id in storage.messages_to_delete:
-            await bot.delete_message(chat_id=state.chat,
-                                     message_id=message_id)
-        storage.messages_to_delete = []
+        for i, message_id in enumerate(storage.messages_to_delete.copy()):
+            try:
+                if await bot.delete_message(chat_id=state.chat,
+                                            message_id=message_id):
+                    storage.messages_to_delete.pop(i)
+            except:
+                pass
         await self._save(state, storage)
 
     async def set_previous_state(self, state: FSMContext):
@@ -874,9 +877,12 @@ class FiltersManager(Storage):
 
     async def filters_menu(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state)
-        await callback.message.edit_reply_markup(reply_markup=Filters.keyboard(time=storage.time,
-                                                                               city=storage.city,
-                                                                               tags=len(storage.tags)))
+        await context_manager.edit(state=state,
+                                   image="filters",
+                                   reply_markup=Filters.keyboard(time=storage.time,
+                                                                 city=storage.city,
+                                                                 tags=len(storage.tags)),
+                                   with_placeholder=False)
         await context_manager.delete_context_messages(state)
 
     async def time_filter(self, callback: CallbackQuery, state: FSMContext):
@@ -908,8 +914,11 @@ class FiltersManager(Storage):
         reply_markup=Filters.time_keyboard(time=storage.time))
 
     async def tags_filter(self, callback: CallbackQuery, state: FSMContext):
-        storage: self = await self._storage(state)
-        image = open('img/test35459468345687456.png', 'rb')
+        """
+        Функція змінює клавіатуру повідомлення на клавіатуру для додавання тегів
+        """
+        storage: self = await self._storage(state) # Об'єкт сховища тимчасових даних
+        image = open('img/tags_filter.png', 'rb') # Отримуємо зображення
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
             caption=f"❌ *Натисніть на тег, щоб видалити його.*",
@@ -917,23 +926,29 @@ class FiltersManager(Storage):
         ),
         reply_markup=ListMenu.keyboard(elements_list=storage.tags,
                                        with_ready=True)
-        )
+        ) # Змінюємо повідомлення відповідно до викликаної функції
 
     async def add_tag(self, message: Message, state: FSMContext):
-        storage: self = await self._storage(state)
-        storage.tags.append(message.text)
-        await message.delete()
-        reply_markup = ListMenu.keyboard(elements_list=storage.tags,
-                                         with_ready=True)
+        """
+        Функція додає тег до списку
+        """
+        storage: self = await self._storage(state) # Об'єкт сховища тимчасових даних
+        if tag := message.text not in storage.tags:
+            storage.tags.append(tag) # Додавання теги до загалього їх списку, якщо такого там ще немає
+        await message.delete() # Видалення повідомлення
         await context_manager.edit(state=state,
                                    text=f"❌ *Натисніть на тег, щоб видалити його.*",
-                                   reply_markup=reply_markup,
-                                   with_placeholder=False)
-        await self._save(state, storage)
+                                   reply_markup=ListMenu.keyboard(elements_list=storage.tags,
+                                                                  with_ready=True),
+                                   with_placeholder=False) # Оновлення клавіатури повідомлення згідно із новим списком
+        await self._save(state, storage) # Зберігання нового списку тегів у сховище
 
     async def remove_tag(self, callback: CallbackQuery, state: FSMContext):
-        storage: self = await self._storage(state)
-        element = callback.data[:callback.data.rindex("_list_menu")]
+        """
+        Функція видаляє тег із списку
+        """
+        storage: self = await self._storage(state) # Об'єкт сховища тимчасових даних
+        element = callback.data[:callback.data.rindex("_list_menu")] # Отримуємо назву теги із назви кнопки у клавіатурі
 
         if element in storage.tags:
             storage.tags.remove(element)
@@ -943,7 +958,7 @@ class FiltersManager(Storage):
                     elements_list=storage.tags,
                     with_ready=True
                 )
-            )
+            ) # Видалення тега із загального їх списку, якщо такий в наяності
 
 
 filters_manager = FiltersManager()
@@ -953,13 +968,33 @@ class DropdownManager:
 
 
 
-class Marketplace:
+class Marketplace(Storage):
     """
     Класс который обеспечивает работу системы поиска проекта, также все функции связанные с собственными объявлениями пользователя
     Функции фильтров и прочего
     """
-    on_page_gigs: list = []
-    open_id: int = 0
+    def __init__(self, document: GigsResponse = None, gigs: list = [], open_id: int = 0):
+        self.document = document
+        self.gigs = gigs
+        self.open_id = open_id
+
+    async def _document(self, state: FSMContext):
+        storage: self = await self._storage(state)
+        return storage.document
+
+    async def next_page(self, state: FSMContext) -> 'GigsResponse':
+        storage: self = await self._storage(state)
+        if storage.document.page < storage.document.pages:
+            storage.document.page += 1
+        await self._save(state, storage)
+        return storage.document
+
+    async def previous_page(self, state: FSMContext) -> 'GigsResponse':
+        storage: self = await self._storage(state)
+        if storage.document.page > 1:
+            storage.document.page -= 1
+        await self._save(state, storage)
+        return storage.document
 
     @staticmethod
     def date(timestamp: int):
@@ -981,33 +1016,30 @@ class Marketplace:
 
         return time
 
-    @classmethod
-    async def get_user_gigs(cls, telegram_id: int = 0,
+    async def get_user_gigs(self, state: FSMContext, telegram_id: int,
                             city: str = "",
-                            limit: int = 5,
+                            limit: int = 3,
                             page: int = 1,
                             from_date: str = "latest",
-                            type: str = "active") -> List[GigMessage]:
-        # if telegram_id:
+                            type: str = "active") -> 'GigsResponse':
+        storage: self = await self._storage(state)
         response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
                                                city=city,
                                                limit=limit,
                                                page=page,
                                                from_date=from_date,
                                                type=type)
-        # elif not telegram_id:
-        #     response = await UserAPI.get_gigs(limit=limit,
-        #                                       page=page,
-        #                                       type=type)
         if response._success:
             response_messages: list = []
 
             gigs = response.data["gigs"]
+            document = GigsResponse().model_validate(response.data["response"])
+            storage.document = document
 
             for i, v in gigs.items():
                 message_data: GigMessage = GigMessage()
                 gig = BaseGig().model_validate(v)
-                time = cls.date(timestamp=gig.data.date)
+                time = self.date(timestamp=gig.data.date)
                 message_data.telegram_id = gig.telegram_id
                 message_data.id = gig.id
                 message_data.text: str = f"{gig.data.name}\n\n" \
@@ -1015,40 +1047,35 @@ class Marketplace:
                                          f"📍 *{gig.data.location.data.name}*\n" \
                                          f"⌚ *{time}*"
                 response_messages.append(message_data)
-            return response_messages
+            storage.gigs = response_messages
+            await self._save(state, storage)
+            return document
         return None
 
-    @classmethod
-    async def get_gigs(cls, request: str,
+    async def get_gigs(self, state: FSMContext, request: str,
                        city: str = "",
-                       limit: int = 5,
+                       limit: int = 3,
                        page: int = 1,
                        from_date: str = "latest",
-                       type: str = "active") -> List[GigMessage]:
+                       type: str = "active") -> 'GigsResponse':
+        storage: self = await self._storage(state)
         response = await UserAPI.get_gigs(request=request,
                                           city=city,
                                           limit=limit,
                                           page=page,
                                           from_date=from_date,
                                           type=type)
-        # if telegram_id:
-        #     response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
-        #                                            limit=limit,
-        #                                            page=page,
-        #                                            type=type)
-        # elif not telegram_id:
-        #     response = await UserAPI.get_gigs(limit=limit,
-        #                                       page=page,
-        #                                       type=type)
         if response._success:
             response_messages: list = []
 
             gigs = response.data["gigs"]
+            document = GigsResponse().model_validate(response.data["response"])
+            storage.document = document
 
             for i, v in gigs.items():
                 message_data: GigMessage = GigMessage()
                 gig = BaseGig().model_validate(v)
-                time = cls.date(timestamp=gig.data.date)
+                time = self.date(timestamp=gig.data.date)
                 message_data.telegram_id = gig.telegram_id
                 message_data.id = gig.id
                 message_data.text: str = f"{gig.data.name}\n\n" \
@@ -1056,34 +1083,36 @@ class Marketplace:
                                          f"📍 *{gig.data.location.data.name}*\n" \
                                          f"⌚ *{time}*"
                 response_messages.append(message_data)
-            return response_messages
+            storage.gigs = response_messages
+            await self._save(state, storage)
+            return document
         return None
 
-    @classmethod
-    async def send_gigs(cls, state: FSMContext, request: str = "",
-                        telegram_id: int = 0, city: str = "", limit: int = 5, page: int = 1,
-                        from_date: str = "latest", type: str = "active", from_saved: bool = False):
-        if request:
-            gigs = await cls.get_gigs(request=request,
-                                      city=city,
-                                      limit=limit,
-                                      page=page,
-                                      from_date=from_date,
-                                      type=type)
-        elif telegram_id:
-            gigs = await cls.get_user_gigs(telegram_id=telegram_id,
-                                           city=city,
-                                           limit=limit,
-                                           page=page,
-                                           from_date=from_date,
-                                           type=type)
-        else:
-            if from_saved:
-                gigs = cls.on_page_gigs
-            else:
-                cls.on_page_gigs = gigs
-
-        for gig in gigs:
+    async def send_gigs(self, state: FSMContext):
+        # cls, state: FSMContext, request: str = "",
+        # telegram_id: int = 0, city: str = "", limit: int = 5, page: int = 1,
+        # from_date: str = "latest", type: str = "active", from_saved: bool = False
+        # if request:
+        #     gigs = await cls.get_gigs(request=request,
+        #                               city=city,
+        #                               limit=limit,
+        #                               page=page,
+        #                               from_date=from_date,
+        #                               type=type)
+        # elif telegram_id:
+        #     gigs = await cls.get_user_gigs(telegram_id=telegram_id,
+        #                                    city=city,
+        #                                    limit=limit,
+        #                                    page=page,
+        #                                    from_date=from_date,
+        #                                    type=type)
+        # else:
+        #     if from_saved:
+        #         gigs = cls.on_page_gigs
+        #     else:
+        #         cls.on_page_gigs = gigs
+        storage: self = await self._storage(state)
+        for gig in storage.gigs:
             await context_manager.appent_delete_list(
                 state=state,
                 message=await bot.send_photo(chat_id=gig.telegram_id,
@@ -1096,25 +1125,25 @@ class Marketplace:
                                              disable_notification=True)
             )
 
-    @classmethod
-    async def keyboard_control(cls, callback: CallbackQuery, state: FSMContext):
+    async def keyboard_control(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
         if callback.data == GigContextMenu.back_callback:
             await callback.message.edit_reply_markup(
                 reply_markup=GigContextMenu.keyboard()
             )
-            cls.open_id = 0
+            storage.open_id = 0
 
         if callback.data.endswith(GigContextMenu.placeholder_callback):
             value: str = callback.data[:callback.data.rindex(GigContextMenu.placeholder_callback)]
-            if cls.open_id:
+            if storage.open_id:
                 try:
                     await bot.edit_message_reply_markup(
                         chat_id=state.chat,
-                        message_id=cls.open_id,
+                        message_id=storage.open_id,
                         reply_markup=GigContextMenu.keyboard()
                     )
                 except:
-                    cls.open_id = 0
+                    storage.open_id = 0
 
             telegram_id, gig_id = tuple(value.split("_"))
             await callback.message.edit_reply_markup(
@@ -1122,7 +1151,19 @@ class Marketplace:
                                                      telegram_id=telegram_id,
                                                      gig_id=gig_id)
             )
-            cls.open_id = callback.message.message_id
+            storage.open_id = callback.message.message_id
+
+        await self._save(state, storage)
+
+    async def update_page(self, state: FSMContext, reply_markup: InlineKeyboardMarkup):
+        """
+        :param page: Page now
+        """
+        storage: self = await self._storage(state)
+
+
+
+marketplace = Marketplace()
 
 
 # import asyncio

@@ -31,6 +31,7 @@ def create_user(request_data: UserCreate, response: Response, request: Request, 
     result._status = status.HTTP_201_CREATED
     result.data = data.model_dump()
 
+    db.close()
     return PostRequest(db=db,
                        response=response,
                        data=result.data,
@@ -55,6 +56,7 @@ def create_gig(request_data: GigCreate, response: Response, request: Request, db
     result.data = data.model_dump()
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -74,6 +76,7 @@ def get_all_users(response: Response, db: Session = Depends(get_db)):
     #     })
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -115,6 +118,7 @@ def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsE
 
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 @user_router.get("/v2/gigs/")
@@ -178,6 +182,7 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
 
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -196,6 +201,7 @@ def update_description(request_data: UpdateDescription, response: Response, db: 
     result.data = request_data.model_dump()
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -211,6 +217,7 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
     result.data = user_instance.model_dump()
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -256,7 +263,11 @@ def get_user_gigs(telegram_id: int,
         response.clear()
         result.data["gigs"] = {}
 
-        document.pages = len(sorted_gigs) // limit + 1
+        rest = 0
+        if len(sorted_gigs) % limit:
+            rest = 1
+
+        document.pages = len(sorted_gigs) // limit + rest
         document.page = page
 
         result.data["response"] = document
@@ -271,6 +282,7 @@ def get_user_gigs(telegram_id: int,
 
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -285,6 +297,7 @@ def user_data(telegram_id: int, db: Session = Depends(get_db)):
     result.data = user.user_data
     result._status = status.HTTP_200_OK
 
+    db.close()
     return result
 
 
@@ -297,6 +310,7 @@ def user_mode(telegram_id: int, db: Session = Depends(get_db)):
 
     result._status = status.HTTP_200_OK
 
+    db.close()
     return user.mode
 
 @user_router.delete("/{telegram_id}/delete_gigs")
@@ -311,3 +325,4 @@ def delete_gigs(telegram_id: int, db: Session = Depends(get_db)):
     user.gigs = gigs.model_dump()
 
     db.commit()
+    db.close()

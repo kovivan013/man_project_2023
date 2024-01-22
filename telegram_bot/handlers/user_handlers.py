@@ -20,7 +20,7 @@ from man_project_2023.telegram_bot.states.states import (
 # )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
-    branch_manager, filters_manager, Marketplace, Storage
+    branch_manager, filters_manager, marketplace, Marketplace, Storage
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
@@ -62,7 +62,7 @@ class StartMH:
                                            current_state=current_state,
                                            text=f"👋 Вітаємо, *{user.username}*!",
                                            reply_markup=MainMenu.keyboard(),
-                                           image="dashboard_profile")
+                                           image="logo")
 
 
     @classmethod
@@ -83,12 +83,33 @@ class MarketplaceMH:
     async def search(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await current_state.set_state(state)
         await MarketplaceStates.search_input.set()
+        kb = InlineKeyboardMarkup(row_width=2)
+        kb.add(
+            InlineKeyboardButton(text="↩ На головну",
+                                 callback_data="sr"),
+            InlineKeyboardButton(text="🎛️ Фільтри",
+                                 callback_data="sr"),
+        )
+        kb.add(
+            InlineKeyboardButton(text="➕ Додати оголошення",
+                                 callback_data="sr")
+        )
+        kb.row(*Controls.pages_keyboard(page=1, pages=3))
+        await marketplace.get_gigs(state=state,
+                             request="Куртка"),
         await context_manager.edit(state=state,
                                    current_state=current_state,
-                                   text="🔍 *Уведіть пошуковий запит:*",
-                                   image="dashboard_profile",
-                                   reply_markup=SearchMenu.keyboard(),
+                                   text="🔍 Пошуковий запит: *Куртка*",
+                                   image="gigs_list",
+                                   reply_markup=kb,
                                    with_placeholder=False)
+        # await context_manager.edit(state=state,
+        #                            current_state=current_state,
+        #                            text="🔍 *Уведіть пошуковий запит:*",
+        #                            image="dashboard_profile",
+        #                            reply_markup=kb,
+        #                            with_placeholder=False)
+        await marketplace.send_gigs(state)
 
     @classmethod
     async def validate_request(cls, message: Message, state: FSMContext) -> None:
@@ -159,57 +180,36 @@ class MyProfileMH:
                                            keyboard_class=MyProfile,
                                            state_class=MyProfile)
         await ProfileStates.gigs.set()
+        if not await context_manager.states_equals(state):
+            await marketplace.get_user_gigs(state=state,
+                                            telegram_id=state.user,
+                                            limit=2)
+        document = await marketplace._document(state)
         await context_manager.edit(state=state,
                                    current_state=current_state,
-                                   image="dashboard_profile",
-                                   reply_markup=MyProfile.gigs_keyboard())
+                                   image="your_gigs",
+                                   reply_markup=MyProfile.gigs_keyboard(page=document.page,
+                                                                        pages=document.pages))
         if not await context_manager.states_equals(state):
-            await Marketplace.send_gigs(state=state,
+            await marketplace.send_gigs(state=state)
+
+    @classmethod
+    async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await context_manager.delete_context_messages(state)
+        if callback.data == Controls.forward_callback:
+            document = await marketplace.next_page(state)
+        elif callback.data == Controls.backward_callback:
+            document = await marketplace.previous_page(state)
+        await context_manager.edit(state=state,
+                                   current_state=current_state,
+                                   image="your_gigs",
+                                   reply_markup=MyProfile.gigs_keyboard(page=document.page,
+                                                                        pages=document.pages))
+        await marketplace.get_user_gigs(state=state,
                                         telegram_id=state.user,
-                                        limit=3)
-            # gigs = await Marketplace.get_gigs(telegram_id=state.user)
-            # for gig in gigs:
-            #     await contextManager.appent_delete_list(
-            #         await bot.send_photo(chat_id=gig.telegram_id,
-            #                              photo=InputFile(photos_db.get(telegram_id=gig.telegram_id,
-            #                                                            gig_id=gig.id)),
-            #                              caption=gig.text,
-            #                              reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-            #                              parse_mode="Markdown")
-            #     )
-            # preview = open('img/423.png', 'rb')
-            # await contextManager.appent_delete_list(
-            #     await bot.send_photo(chat_id=state.chat,
-            #                          caption="Я знайшов *чорну куртку*.\n"
-            #                                  "📍 *Кременчук*\n"
-            #                                  "⌚ *Сьогодні, об 16:56*",
-            #                          photo=preview,
-            #                          reply_markup={"inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-            #                          parse_mode="Markdown")
-            # )
-            # preview = open('img/sh.png', 'rb')
-            # await contextManager.appent_delete_list(
-            #     await bot.send_photo(chat_id=state.chat,
-            #                          caption="Я знайшов *шапку*.\n"
-            #                                  "📍 *Кременчук*\n"
-            #                                  "⌚ *Учора, об 11:32*",
-            #                          photo=preview,
-            #                          reply_markup={
-            #                              "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}]]},
-            #                          parse_mode="Markdown")
-            # )
-            # preview = open('img/pas.png', 'rb')
-            # await contextManager.appent_delete_list(
-            #     await bot.send_photo(chat_id=state.chat,
-            #                          caption="Я знайшов *паспорт на ім'я* \*\*\*\*\*\* \*\*\*\*\*\*\*\*\*\*.\n"
-            #                                  "📍 *Кременчук*\n"
-            #                                  "⌚ *25.10.23*",
-            #                          photo=preview,
-            #                          reply_markup={
-            #                              "inline_keyboard": [[{"text": "⚙  Налаштування️", "callback_data": "3754t6"}],
-            #                                                  [{"text": "Додати оголошення ➕", "callback_data": "add_gig"}]]},
-            #                          parse_mode="Markdown")
-            # )
+                                        page=document.page,
+                                        limit=2)
+        await marketplace.send_gigs(state)
 
 
     @classmethod
@@ -306,7 +306,7 @@ class CreateGig:
         edited_message = await context_manager.edit(state=state,
                                                     current_state=current_state,
                                                     text=f"⌨️ *Уведіть назву оголошення:*",
-                                                    image="dashboard_profile",
+                                                    image="name",
                                                     reply_markup=CreateGigMenu.keyboard(),
                                                     with_placeholder=False)
 
@@ -331,7 +331,7 @@ class CreateGig:
                                                     text=f"Ви увели: *{message.text}*\n\n"
                                                          f""
                                                          f"👆 Натисніть *\"Далі\"* або уведіть *іншу назву*:",
-                                                    image="dashboard_profile",
+                                                    image="name",
                                                     reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -342,7 +342,7 @@ class CreateGig:
         await CreateGigStates.description.set()
         edited_message = await context_manager.edit(state=state,
                                                     text=f"⌨️ *Уведіть опис оголошення:*",
-                                                    image="dashboard_profile",
+                                                    image="description",
                                                     reply_markup=CreateGigMenu.keyboard(),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -358,7 +358,7 @@ class CreateGig:
                                                     text=f"Ви увели: *{message.text}*\n\n"
                                                          f""
                                                          f"👆 Натисніть *\"Далі\"* або уведіть *інший опис*:",
-                                                    image="dashboard_profile",
+                                                    image="description",
                                                     reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -369,7 +369,7 @@ class CreateGig:
         await CreateGigStates.photo.set()
         edited_message = await context_manager.edit(state=state,
                                                     text=f"⌨️ *Відправте фотографію предмета, який знайшли:*",
-                                                    image="dashboard_profile",
+                                                    image="photo",
                                                     reply_markup=CreateGigMenu.keyboard(with_faq=True),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -400,7 +400,7 @@ class CreateGig:
         await CreateGigStates.location.set()
         edited_message = await context_manager.edit(state=state,
                                                     text=f"⌨️ *Відправте локацію місця, де ви знайшли річ:*",
-                                                    image="dashboard_profile",
+                                                    image="location",
                                                     reply_markup=CreateGigMenu.keyboard(with_faq=True),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -425,7 +425,7 @@ class CreateGig:
                                                     text=f"Ви обрали *{' '.join(city.values())}*\n\n"
                                                          f""
                                                          f"👆 Натисніть *\"Далі\"* або відправте локацію *іншого місця*:",
-                                                    image="dashboard_profile",
+                                                    image="location",
                                                     reply_markup=CreateGigMenu.keyboard(with_next=True),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -437,7 +437,7 @@ class CreateGig:
         await calendar_menu.update_dates(state)
         edited_message = await context_manager.edit(state=state,
                                                     text=f"⌨️ *Оберіть дату, коли була знайдена річ:*",
-                                                    image="dashboard_profile",
+                                                    image="date",
                                                     reply_markup=await calendar_menu.reply_markup(state),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -469,7 +469,7 @@ class CreateGig:
         await CreateGigStates.tags.set()
         edited_message = await context_manager.edit(state=state,
                                                     text=f"⌨️ *Уведіть до 5 тегів для Вашого оголошення:*",
-                                                    image="dashboard_profile",
+                                                    image="tags",
                                                     reply_markup=ListMenu.keyboard(with_skip=True),
                                                     with_placeholder=False)
         await branch_manager.set(state=state,
@@ -630,9 +630,9 @@ def register_user_handlers(dp: Dispatcher) -> None:
         UpdateDescriptionMH.save_data, Text(equals=UpdateProfile.save_callback), state=UpdateDescriptionStates.input_description
     )
 
-    dp.register_callback_query_handler(
-        filters_manager.filters_menu, Text(equals=Filters.placeholder_callback), state=ProfileStates.gigs
-    )
+    # dp.register_callback_query_handler(
+    #     filters_manager.filters_menu, Text(equals=MainMenu.add_gig_callback), state=ProfileStates.gigs
+    # )
     dp.register_callback_query_handler(
         filters_manager.time_filter, Text(equals=Filters.time_callback), state=ProfileStates.gigs
     )
@@ -648,8 +648,15 @@ def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_message_handler(
         filters_manager.add_tag, state=ProfileStates.gigs
     )
+    # dp.register_callback_query_handler(
+    #     MyProfileMH.my_gigs, Text(equals=Filters.backward_callback), state=ProfileStates.gigs
+    # )
+
     dp.register_callback_query_handler(
-        MyProfileMH.my_gigs, Text(equals=Filters.backward_callback), state=ProfileStates.gigs
+        MyProfileMH.update_page, Text(equals=Filters.forward_callback), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        MyProfileMH.update_page, Text(equals=Filters.backward_callback), state=ProfileStates.gigs
     )
 
     dp.register_callback_query_handler(
@@ -731,8 +738,8 @@ def register_user_handlers(dp: Dispatcher) -> None:
         calendar_menu.move_bacward, Text(equals=Controls.backward_callback), state=CreateGigStates.date
     )
     dp.register_callback_query_handler(
-        Marketplace.keyboard_control, Text(endswith=GigContextMenu.placeholder_callback), state=ProfileStates.gigs
+        marketplace.keyboard_control, Text(endswith=GigContextMenu.placeholder_callback), state=ProfileStates.gigs
     )
     dp.register_callback_query_handler(
-        Marketplace.keyboard_control, Text(equals=GigContextMenu.back_callback), state=ProfileStates.gigs
+        marketplace.keyboard_control, Text(equals=GigContextMenu.back_callback), state=ProfileStates.gigs
     )

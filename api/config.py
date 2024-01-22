@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 class Settings(BaseSettings):
     SERVER_HOST: str = "127.0.0.1"
-    SERVER_PORT: int = 8000
+    SERVER_PORT: int = 8008
 
 
 load_dotenv()

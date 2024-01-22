@@ -19,3 +19,4 @@ class User(BaseModel):
 
     def as_dict(self) -> dict:
         return self.__dict__
+

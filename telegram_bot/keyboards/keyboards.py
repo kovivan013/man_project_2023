@@ -144,11 +144,40 @@ class Controls:
     plus_callback: str = f"plus_callback"
     minus_callback: str = f"minus_callback"
 
+    @classmethod
+    def pages_keyboard(cls, page: int, pages: int):
+        keyboard: list = []
+
+        if page > 1:
+            keyboard.append(
+                {
+                    "text": cls.short_backward,
+                    "callback_data": cls.backward_callback
+                }
+            )
+        # f"{'1 ... ' if page > 2 else f'1 ' if page == 2 else ''}{page}{f' ... {pages}' if page < pages else f' {pages}' if pages - 1 == page else ''}"
+        keyboard.append(
+            {
+                "text": f"{page} із {pages}",
+                "callback_data": "pass"
+            }
+        )
+        if page < pages:
+            keyboard.append(
+                {
+                    "text": cls.short_forward,
+                    "callback_data": cls.forward_callback
+                }
+            )
+
+        return keyboard
+
+
 
 @dataclass(frozen=True)
 class Filters(Controls, YesOrNo):
 
-    placeholder: str = f"🎛️ Фільтри ▶"
+    placeholder: str = f"🎛️ Фільтри ▼"
 
     time: str = f"⏰ За часом"
     city: str = f"📍 За місцем"
@@ -240,7 +269,7 @@ class DropdownMenu:
 
     @classmethod
     def placeholder_menu(cls, current_menu: dict):
-        keyboard = default_inline_keyboard(row_width=2)
+        keyboard = default_inline_keyboard()
 
         keyboard.add(
             InlineKeyboardButton(text=f"↩ На головну",
@@ -254,7 +283,7 @@ class DropdownMenu:
 
     @classmethod
     def menu_keyboard(cls, buttons: list) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard(row_width=2)
+        keyboard = default_inline_keyboard()
 
         # keyboard.add(
         #     InlineKeyboardButton(text=cls.menu_sign,
@@ -346,17 +375,17 @@ class MainMenu:
 
     @classmethod
     def keyboard(cls, mode: int = 0) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard()
+        keyboard = default_inline_keyboard() # Визначення об'єкта клавіатури
 
         modes: dict = {
             0: "Шукача 🔦",
             1: "Детектива 🔍"
-        }
+        } # Словник із назвами режимів користувача
 
         keyboard.add(
             InlineKeyboardButton(text=f"{cls.change_mode} {modes[mode]}",
                                  callback_data=cls.change_mode_callback)
-        )
+        ) # Додавання кнопкт для зміни режиму користувача
 
         if mode:
             keyboard.add(
@@ -367,7 +396,9 @@ class MainMenu:
             keyboard.add(
                 InlineKeyboardButton(text=cls.search,
                                      callback_data=cls.search_callback)
-            )
+            ) # Розгалудження, яке використовуючи переданий аргумент "mode" визначає,
+            # у якому режимі зараз знаходиться користувач та в залежності від цього
+            # створює кнопки для клавіатури
 
         keyboard.add(
             InlineKeyboardButton(text=cls.profile,
@@ -378,9 +409,9 @@ class MainMenu:
                                  callback_data=cls.support_callback),
             InlineKeyboardButton(text=cls.info_about,
                                  callback_data=cls.info_about_callback)
-        )
+        ) # Додавання кнопок до клавіатури
 
-        return keyboard
+        return keyboard # Повернення об'єкта клавіатури для подальшого використання
 
 # TODO: Нужно разделить на 2 класса потерявшего и нашедшего, буду смотреть по ситуации
 @dataclass(frozen=True)
@@ -399,7 +430,7 @@ class Navigation:
 
     @classmethod
     def finder_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-        reply_keyboard = default_reply_keyboard(row_width=2, one_time_keyboard=False)
+        reply_keyboard = default_reply_keyboard(one_time_keyboard=False)
 
         reply_keyboard.add(
             KeyboardButton(text=cls.dashboard),
@@ -415,7 +446,7 @@ class Navigation:
         pass
 
 
-class MyProfile(Filters, MainMenu):
+class MyProfile(MainMenu, Controls):
 
     def __init__(self):
         self.info_about: str = f"Про себе 🔓"
@@ -423,7 +454,6 @@ class MyProfile(Filters, MainMenu):
 
         self.info_about_callback: str = f"info_about_callback"
         self.gigs_callback: str = f"gigs_callback"
-
 
     update: str = f"🖊 Змінити"
     share: str = f"🔗 Поділитися"
@@ -445,15 +475,15 @@ class MyProfile(Filters, MainMenu):
         return keyboard
 
     @classmethod
-    def gigs_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+    def gigs_keyboard(cls, page: int, pages: int) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
 
         keyboard.add(
-            InlineKeyboardButton(text=cls.placeholder,
-                                 callback_data=cls.placeholder_callback),
             InlineKeyboardButton(text=cls.add_gig,
                                  callback_data=cls.add_gig_callback)
         )
+        keyboard.row(*cls.pages_keyboard(page=page,
+                                         pages=pages))
 
         return keyboard
 
@@ -559,14 +589,13 @@ class CalendarMenu(Controls, YesOrNo):
         keyboard = default_inline_keyboard(row_width=7)
 
         args = all([year, month, day])
+        now = datetime.datetime.now()
 
         if args:
-            now = datetime.datetime.now()
             today = datetime.datetime(year, month, day, now.hour, now.minute)
         else:
             today = datetime.datetime.now()
 
-        now = datetime.datetime.now()
         firts_month_day = datetime.datetime(today.year, today.month, 1)
         weekday = firts_month_day.weekday()
         days_to_end = 7 - weekday
@@ -611,7 +640,7 @@ class CalendarMenu(Controls, YesOrNo):
 
         for i in range(1, r):
             for j in range(1, 8):
-                if day > days_in_month or (i<2 and j < weekday + 1):
+                if (day > days_in_month or (i<2 and j < weekday + 1)) or (day > now.day and today.month == now.month and today.year == now.year):
                     keyboard.insert(
                         InlineKeyboardButton(
                             text=" ",
@@ -630,6 +659,7 @@ class CalendarMenu(Controls, YesOrNo):
                         callback_data=f"{callback}{cls.date_callback}"
                     )
                 )
+
                 day += 1
 
         keyboard.add(
@@ -722,6 +752,9 @@ class GigContextMenu:
         )
 
         return keyboard
+
+class MarketplaceMenu(Controls):
+    pass
 
 class SearchMenu(Controls):
 
