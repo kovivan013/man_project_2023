@@ -177,7 +177,7 @@ class Controls:
 @dataclass(frozen=True)
 class Filters(Controls, YesOrNo):
 
-    placeholder: str = f"🎛️ Фільтри ▼"
+    placeholder: str = f"🎛️ Фільтри"
 
     time: str = f"⏰ За часом"
     city: str = f"📍 За місцем"
@@ -753,8 +753,27 @@ class GigContextMenu:
 
         return keyboard
 
-class MarketplaceMenu(Controls):
-    pass
+class MarketplaceMenu(Filters, MainMenu):
+
+    @classmethod
+    def keyboard(cls, page: int, pages: int) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text="↩ На головну",
+                                 callback_data="back_to_main"),
+            InlineKeyboardButton(text=cls.placeholder,
+                                 callback_data=cls.placeholder_callback),
+        )
+        keyboard.add(
+            InlineKeyboardButton(text=cls.add_gig,
+                                 callback_data=cls.add_gig_callback)
+        )
+
+        keyboard.row(*cls.pages_keyboard(page=page,
+                                         pages=pages))
+
+        return keyboard
 
 class SearchMenu(Controls):
 

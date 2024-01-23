@@ -14,10 +14,6 @@ from man_project_2023.telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
     CreateGigStates, MainMenuStates, MarketplaceStates, State
 )
-# from man_project_2023.telegram_bot.classes.utils_classes import (
-#     Calendar, CurrentState, ContextManager, ListMenuManager,
-#     BranchManager, Marketplace
-# )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
     branch_manager, filters_manager, marketplace, Marketplace, Storage
@@ -26,7 +22,9 @@ from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, SearchMenu
 )
-
+from man_project_2023.telegram_bot.decorators.decorators import (
+    catch_error
+)
 from man_project_2023.photos_database.handlers import PhotosDB
 from man_project_2023.utils.schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser
@@ -112,12 +110,33 @@ class MarketplaceMH:
         await marketplace.send_gigs(state)
 
     @classmethod
-    async def validate_request(cls, message: Message, state: FSMContext) -> None:
-        #TODO: request text validate
+    async def request(cls, message: Message, state: FSMContext) -> None:
+        # TODO: request text validate
         if request := message.text:
             await Marketplace.send_gigs(state=state,
                                         request=request,
                                         limit=3)
+
+
+    @classmethod
+    async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await context_manager.delete_context_messages(state)
+        if callback.data == Controls.forward_callback:
+            document = await marketplace.next_page(state)
+        elif callback.data == Controls.backward_callback:
+            document = await marketplace.previous_page(state)
+        await context_manager.edit(state=state,
+                                   current_state=current_state,
+                                   image="your_gigs",
+                                   reply_markup=MyProfile.gigs_keyboard(page=document.page,
+                                                                        pages=document.pages))
+
+        # TODO: add requester key to document (document.requester) that equals telegram_id or request text, depends of get_gigs() or get_user_gigs() requested
+        await marketplace.get_gigs(state=state,
+                                   request="куртка",
+                                   page=document.page,
+                                   limit=2)
+        await marketplace.send_gigs(state)
 
 
 class MyProfileMH:
@@ -143,6 +162,7 @@ class MyProfileMH:
 
 
     @classmethod
+    @catch_error
     async def info_about(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await current_state.set_state(state)
         await current_state.update_classes(state=state,
@@ -490,6 +510,7 @@ class CreateGig:
                                  message=edited_message)
 
     @classmethod
+    @catch_error
     async def confirm_create(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await CreateGigStates.check_data.set()
         async with state.proxy() as data:
@@ -522,6 +543,7 @@ class CreateGig:
                                  _state=await current_state.state_attr(state))
 
     @classmethod
+    @catch_error
     async def create(cls, callback: CallbackQuery, state: FSMContext) -> None:
         async with state.proxy() as data:
             data["_payload"].telegram_id = state.user
