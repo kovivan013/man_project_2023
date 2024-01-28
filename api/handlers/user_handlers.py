@@ -150,7 +150,7 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
                             })
                             break
 
-    if city:
+    if city and city != "all":
         sorted_gigs: list = []
         for i in all_gigs:
             data = BaseGig().model_validate(list(i.values())[0])
@@ -168,6 +168,8 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
         response.clear()
         result.data["gigs"] = {}
 
+        document.key = title
+        document.gigs = len(sorted_gigs)
         document.pages = len(sorted_gigs) // limit + 1
         document.page = page
 

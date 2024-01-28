@@ -2,24 +2,25 @@ import asyncio
 import datetime
 from pydantic import BaseModel
 
-from typing import List, ClassVar
+from typing import List, ClassVar, Union
 
 from man_project_2023.telegram_bot.config import dp, Dispatcher
 
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import InputMediaPhoto, InputFile
 from man_project_2023.telegram_bot.config import bot
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI
+from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI, LocationAPI
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
     InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
 )
+from man_project_2023.telegram_bot.states.states import FiltersStates
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
 from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser, GigsResponse
 from man_project_2023.utils.schemas.schemas import GigMessage
 from man_project_2023.photos_database.handlers import PhotosDB
-from man_project_2023.telegram_bot.api.utils_schemas import StateStructure
+from man_project_2023.telegram_bot.api.utils_schemas import StateStructure, LocationStructure
 from aiogram.dispatcher.storage import FSMContext
 
 utils = Utils()
@@ -870,12 +871,22 @@ class FiltersManager(Storage):
 
     _KEY = "filters_manager"
 
+    time_signs: dict = {
+        "latest": "нових",
+        "oldest": "старих",
+    }
+
     def __init__(self, time: str = "latest", city: str = "all", tags: list = []):
         self.time = time
         self.city = city
         self.tags = tags
 
+    async def get_filters(self, state: FSMContext):
+        storage: self = await self._storage(state)
+        return storage
+
     async def filters_menu(self, callback: CallbackQuery, state: FSMContext):
+        await FiltersStates.filters.set()
         storage: self = await self._storage(state)
         await context_manager.edit(state=state,
                                    image="filters",
@@ -886,39 +897,65 @@ class FiltersManager(Storage):
         await context_manager.delete_context_messages(state)
 
     async def time_filter(self, callback: CallbackQuery, state: FSMContext):
+        await FiltersStates.time_filter.set()
         storage: self = await self._storage(state)
-        time: dict = {
-            "latest": "нових",
-            "oldest": "старих",
-        }
-        image = open('img/test35459468345687456.png', 'rb')
+        image = await current_state.state_photo(image="time")
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
-            caption=f"Починати з *{time[storage.time]}* оголошень:",
+            caption=f"⌚ Починати з *{self.time_signs[storage.time]}* оголошень:",
             parse_mode="Markdown"
         ),
-        reply_markup=Filters.time_keyboard(time=storage.time))
+        reply_markup=Filters.time_keyboard(time=storage.time)
+        )
+
+    async def set_time(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        storage.time = callback.data
+        image = await current_state.state_photo(image="time")
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=image,
+            caption=f"⌚ Починати з *{self.time_signs[storage.time]}* оголошень:",
+            parse_mode="Markdown"
+        ),
+        reply_markup=Filters.time_keyboard(time=callback.data)
+        )
+        await storage._save(state, storage)
+
 
     async def location_filter(self, callback: CallbackQuery, state: FSMContext):
+        await FiltersStates.location_filter.set()
         storage: self = await self._storage(state)
-        time: dict = {
-            "latest": "нових",
-            "oldest": "старих",
-        }
-        image = open('img/test35459468345687456.png', 'rb')
+        image = await current_state.state_photo(image="location")
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
-            caption=f"Починати з *{time[storage.time]}* оголошень:",
+            caption=f"📍 Відправте назву локації, у межах якої хочете фільтрувати оголошення:",
             parse_mode="Markdown"
         ),
-        reply_markup=Filters.time_keyboard(time=storage.time))
+            reply_markup=Filters.location_keyboard()
+        )
+
+    async def set_location(self, message: Message, state: FSMContext):
+        # TODO: location reset to default value
+        storage: self = await self._storage(state)
+        storage.city = message.text
+        await message.delete()
+        location = await LocationAPI.get_location(name=storage.city)
+        address = await LocationAPI.get_address(**location)
+        city = await LocationStructure(location=address.data).get_city(with_type=True,
+                                                                       case=1)
+        await context_manager.edit(
+            state=state,
+            image="location",
+            text=f"📍 Фільтрувати в межах *{' '.join(city.values())}*",
+            reply_markup=Filters.location_keyboard(),
+            with_placeholder=False
+        )
+        await storage._save(state, storage)
 
     async def tags_filter(self, callback: CallbackQuery, state: FSMContext):
-        """
-        Функція змінює клавіатуру повідомлення на клавіатуру для додавання тегів
-        """
-        storage: self = await self._storage(state) # Об'єкт сховища тимчасових даних
-        image = open('img/tags_filter.png', 'rb') # Отримуємо зображення
+        await FiltersStates.tags_filter.set()
+        storage: self = await self._storage(state)
+        image = await current_state.state_photo(image="tags")
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
             caption=f"❌ *Натисніть на тег, щоб видалити його.*",
@@ -926,29 +963,24 @@ class FiltersManager(Storage):
         ),
         reply_markup=ListMenu.keyboard(elements_list=storage.tags,
                                        with_ready=True)
-        ) # Змінюємо повідомлення відповідно до викликаної функції
+        )
 
     async def add_tag(self, message: Message, state: FSMContext):
-        """
-        Функція додає тег до списку
-        """
-        storage: self = await self._storage(state) # Об'єкт сховища тимчасових даних
-        if tag := message.text not in storage.tags:
-            storage.tags.append(tag) # Додавання теги до загалього їх списку, якщо такого там ще немає
-        await message.delete() # Видалення повідомлення
+        storage: self = await self._storage(state)
+        if message.text not in storage.tags:
+            storage.tags.append(message.text)
+        await message.delete()
         await context_manager.edit(state=state,
+                                   image="tags",
                                    text=f"❌ *Натисніть на тег, щоб видалити його.*",
                                    reply_markup=ListMenu.keyboard(elements_list=storage.tags,
                                                                   with_ready=True),
-                                   with_placeholder=False) # Оновлення клавіатури повідомлення згідно із новим списком
-        await self._save(state, storage) # Зберігання нового списку тегів у сховище
+                                   with_placeholder=False)
+        await self._save(state, storage)
 
     async def remove_tag(self, callback: CallbackQuery, state: FSMContext):
-        """
-        Функція видаляє тег із списку
-        """
-        storage: self = await self._storage(state) # Об'єкт сховища тимчасових даних
-        element = callback.data[:callback.data.rindex("_list_menu")] # Отримуємо назву теги із назви кнопки у клавіатурі
+        storage: self = await self._storage(state)
+        element = callback.data[:callback.data.rindex("_list_menu")]
 
         if element in storage.tags:
             storage.tags.remove(element)
@@ -958,8 +990,7 @@ class FiltersManager(Storage):
                     elements_list=storage.tags,
                     with_ready=True
                 )
-            ) # Видалення тега із загального їх списку, якщо такий в наяності
-
+            )
 
 filters_manager = FiltersManager()
 
@@ -973,7 +1004,10 @@ class Marketplace(Storage):
     Класс который обеспечивает работу системы поиска проекта, также все функции связанные с собственными объявлениями пользователя
     Функции фильтров и прочего
     """
-    def __init__(self, document: GigsResponse = None, gigs: list = [], open_id: int = 0):
+
+    _KEY = "marketplace"
+
+    def __init__(self, document: GigsResponse = GigsResponse(), gigs: list = [], open_id: int = 0):
         self.document = document
         self.gigs = gigs
         self.open_id = open_id
@@ -981,6 +1015,11 @@ class Marketplace(Storage):
     async def _document(self, state: FSMContext):
         storage: self = await self._storage(state)
         return storage.document
+
+    async def set_request(self, state: FSMContext, key: str):
+        storage: self = await self._storage(state)
+        storage.document.key = key
+        await self._save(state, storage)
 
     async def next_page(self, state: FSMContext) -> 'GigsResponse':
         storage: self = await self._storage(state)
@@ -1052,18 +1091,21 @@ class Marketplace(Storage):
             return document
         return None
 
-    async def get_gigs(self, state: FSMContext, request: str,
+    async def get_gigs(self, state: FSMContext,
+                       request: str,
                        city: str = "",
-                       limit: int = 3,
+                       limit: int = 2,
                        page: int = 1,
                        from_date: str = "latest",
                        type: str = "active") -> 'GigsResponse':
         storage: self = await self._storage(state)
+        filters = await filters_manager.get_filters(state)
+        # TODO: add tag filter to backend search function
         response = await UserAPI.get_gigs(request=request,
-                                          city=city,
+                                          city=filters.city,
                                           limit=limit,
                                           page=page,
-                                          from_date=from_date,
+                                          from_date=filters.time,
                                           type=type)
         if response._success:
             response_messages: list = []
@@ -1154,12 +1196,6 @@ class Marketplace(Storage):
             storage.open_id = callback.message.message_id
 
         await self._save(state, storage)
-
-    async def update_page(self, state: FSMContext, reply_markup: InlineKeyboardMarkup):
-        """
-        :param page: Page now
-        """
-        storage: self = await self._storage(state)
 
 
 

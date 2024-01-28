@@ -251,6 +251,16 @@ class Filters(Controls, YesOrNo):
 
         return keyboard
 
+    @classmethod
+    def location_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.ready,
+                                 callback_data=cls.ready_callback)
+        )
+
+        return keyboard
 
 @dataclass(frozen=True)
 class DropdownMenu:
@@ -755,6 +765,10 @@ class GigContextMenu:
 
 class MarketplaceMenu(Filters, MainMenu):
 
+    search: str = f"Пошук 🔦"
+
+    search_callback: str = f"search_callback"
+
     @classmethod
     def keyboard(cls, page: int, pages: int) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard()
@@ -775,14 +789,8 @@ class MarketplaceMenu(Filters, MainMenu):
 
         return keyboard
 
-class SearchMenu(Controls):
-
-    search: str = f"Пошук 🔦"
-
-    search_callback: str = f"search_callback"
-
     @classmethod
-    def keyboard(cls, with_search: bool = False) -> Union[InlineKeyboardMarkup]:
+    def search_keyboard(cls, with_search: bool = False) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard()
 
         keyboard.add(
@@ -797,3 +805,26 @@ class SearchMenu(Controls):
             )
 
         return keyboard
+
+# class SearchMenu(Controls):
+#
+#     search: str = f"Пошук 🔦"
+#
+#     search_callback: str = f"search_callback"
+#
+#     @classmethod
+#     def keyboard(cls, with_search: bool = False) -> Union[InlineKeyboardMarkup]:
+#         keyboard = default_inline_keyboard()
+#
+#         keyboard.add(
+#             InlineKeyboardButton(text=cls.backward,
+#                                  callback_data=cls.backward_callback)
+#         )
+#
+#         if with_search:
+#             keyboard.insert(
+#                 InlineKeyboardButton(text=cls.search,
+#                                      callback_data=cls.search_callback)
+#             )
+#
+#         return keyboard

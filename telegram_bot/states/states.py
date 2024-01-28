@@ -7,6 +7,7 @@ class MainMenuStates(StatesGroup):
 
 class MarketplaceStates(StatesGroup):
     search_input = State()
+    gigs_list = State()
 
 class ProfileStates(StatesGroup):
     info_about = State()
@@ -37,6 +38,7 @@ class CreateGigStates(StatesGroup):
     backward = State()
 
 class FiltersStates(StatesGroup):
+    filters = State()
     time_filter = State()
     location_filter = State()
     tags_filter =State()

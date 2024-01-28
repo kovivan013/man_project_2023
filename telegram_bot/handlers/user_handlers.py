@@ -12,7 +12,7 @@ from man_project_2023.telegram_bot.utils.utils import Utils
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
 from man_project_2023.telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
-    CreateGigStates, MainMenuStates, MarketplaceStates, State
+    CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates, State
 )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
@@ -20,7 +20,7 @@ from man_project_2023.telegram_bot.classes.utils_classes import (
 )
 from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, SearchMenu
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu
 )
 from man_project_2023.telegram_bot.decorators.decorators import (
     catch_error
@@ -65,6 +65,7 @@ class StartMH:
 
     @classmethod
     async def start_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+
         await context_manager.delete(state)
         await current_state.update_classes(state=state,
                                            keyboard_class=MainMenu,
@@ -81,42 +82,56 @@ class MarketplaceMH:
     async def search(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await current_state.set_state(state)
         await MarketplaceStates.search_input.set()
-        kb = InlineKeyboardMarkup(row_width=2)
-        kb.add(
-            InlineKeyboardButton(text="↩ На головну",
-                                 callback_data="sr"),
-            InlineKeyboardButton(text="🎛️ Фільтри",
-                                 callback_data="sr"),
-        )
-        kb.add(
-            InlineKeyboardButton(text="➕ Додати оголошення",
-                                 callback_data="sr")
-        )
-        kb.row(*Controls.pages_keyboard(page=1, pages=3))
-        await marketplace.get_gigs(state=state,
-                             request="Куртка"),
         await context_manager.edit(state=state,
                                    current_state=current_state,
-                                   text="🔍 Пошуковий запит: *Куртка*",
+                                   text="🔍 *Уведіть пошуковий запит:*",
                                    image="gigs_list",
-                                   reply_markup=kb,
+                                   reply_markup=MarketplaceMenu.search_keyboard(),
                                    with_placeholder=False)
-        # await context_manager.edit(state=state,
-        #                            current_state=current_state,
-        #                            text="🔍 *Уведіть пошуковий запит:*",
-        #                            image="dashboard_profile",
-        #                            reply_markup=kb,
-        #                            with_placeholder=False)
-        await marketplace.send_gigs(state)
 
     @classmethod
-    async def request(cls, message: Message, state: FSMContext) -> None:
-        # TODO: request text validate
-        if request := message.text:
-            await Marketplace.send_gigs(state=state,
-                                        request=request,
-                                        limit=3)
+    async def check_request(cls, message: Message, state: FSMContext) -> None:
+        if len(request_key := message.text) <= 100:
+            await message.delete()
+            await marketplace.set_request(state=state,
+                                          key=request_key)
+            await context_manager.edit(state=state,
+                                       text=f"🔍 Ваш пошуковий запит: *{request_key}*",
+                                       image="gigs_list",
+                                       reply_markup=MarketplaceMenu.search_keyboard(with_search=True),
+                                       with_placeholder=False)
 
+    @classmethod
+    async def request(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await MarketplaceStates.gigs_list.set()
+        request = await marketplace._document(state)
+        await marketplace.get_gigs(state=state,
+                                   request=request.key)
+        document = await marketplace._document(state)
+        await context_manager.edit(state=state,
+                                   text=f"🗒️ За Вашим пошуковим запитом було знайдено *{document.gigs}* оголошень!",
+                                   image="gigs_list",
+                                   reply_markup=MarketplaceMenu.keyboard(page=document.page,
+                                                                         pages=document.pages),
+                                   with_placeholder=False)
+        await marketplace.send_gigs(state)
+        doc = await marketplace._document(state)
+
+    # @classmethod
+    # async def back_to_current(cls, callback: CallbackQuery, state: FSMContext) -> None:
+    #     await MarketplaceStates.gigs_list.set()
+    #     request = await marketplace._document(state)
+    #     await marketplace.get_gigs(state=state,
+    #                                request=request.key)
+    #     document = await marketplace._document(state)
+    #     await context_manager.edit(state=state,
+    #                                text=f"🗒️ За Вашим пошуковим запитом було знайдено *{document.gigs}* оголошень!",
+    #                                image="gigs_list",
+    #                                reply_markup=MarketplaceMenu.keyboard(page=document.page,
+    #                                                                      pages=document.pages),
+    #                                with_placeholder=False)
+    #     await marketplace.send_gigs(state)
+    #     doc = await marketplace._document(state)
 
     @classmethod
     async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -126,16 +141,14 @@ class MarketplaceMH:
         elif callback.data == Controls.backward_callback:
             document = await marketplace.previous_page(state)
         await context_manager.edit(state=state,
-                                   current_state=current_state,
-                                   image="your_gigs",
-                                   reply_markup=MyProfile.gigs_keyboard(page=document.page,
-                                                                        pages=document.pages))
-
-        # TODO: add requester key to document (document.requester) that equals telegram_id or request text, depends of get_gigs() or get_user_gigs() requested
+                                   text=f"🗒️ За Вашим пошуковим запитом було знайдено *{document.gigs}* оголошень!",
+                                   image="gigs_list",
+                                   reply_markup=MarketplaceMenu.keyboard(page=document.page,
+                                                                         pages=document.pages),
+                                   with_placeholder=False)
         await marketplace.get_gigs(state=state,
-                                   request="куртка",
-                                   page=document.page,
-                                   limit=2)
+                                   request=document.key,
+                                   page=document.page)
         await marketplace.send_gigs(state)
 
 
@@ -224,7 +237,8 @@ class MyProfileMH:
                                    current_state=current_state,
                                    image="your_gigs",
                                    reply_markup=MyProfile.gigs_keyboard(page=document.page,
-                                                                        pages=document.pages))
+                                                                        pages=document.pages),
+                                   with_placeholder=False)
         await marketplace.get_user_gigs(state=state,
                                         telegram_id=state.user,
                                         page=document.page,
@@ -599,6 +613,18 @@ def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_callback_query_handler(
         MarketplaceMH.search, Text(equals=MainMenu.search_callback), state=MainMenuStates.start_menu
     )
+    dp.register_message_handler(
+        MarketplaceMH.check_request, state=MarketplaceStates.search_input
+    )
+    dp.register_callback_query_handler(
+        MarketplaceMH.request, Text(equals=MarketplaceMenu.search_callback), state=MarketplaceStates.search_input
+    )
+    dp.register_callback_query_handler(
+        MarketplaceMH.update_page, Text(equals=Controls.forward_callback), state=MarketplaceStates.gigs_list
+    )
+    dp.register_callback_query_handler(
+        MarketplaceMH.update_page, Text(equals=Controls.backward_callback), state=MarketplaceStates.gigs_list
+    )
 
     dp.register_callback_query_handler(
         MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.info_about
@@ -652,23 +678,41 @@ def register_user_handlers(dp: Dispatcher) -> None:
         UpdateDescriptionMH.save_data, Text(equals=UpdateProfile.save_callback), state=UpdateDescriptionStates.input_description
     )
 
-    # dp.register_callback_query_handler(
-    #     filters_manager.filters_menu, Text(equals=MainMenu.add_gig_callback), state=ProfileStates.gigs
-    # )
     dp.register_callback_query_handler(
-        filters_manager.time_filter, Text(equals=Filters.time_callback), state=ProfileStates.gigs
+        filters_manager.filters_menu, Text(equals=Filters.placeholder_callback), state=MarketplaceStates.gigs_list
     )
     dp.register_callback_query_handler(
-        filters_manager.tags_filter, Text(equals=Filters.tags_callback), state=ProfileStates.gigs
+        filters_manager.time_filter, Text(equals=Filters.time_callback), state=FiltersStates.filters
     )
     dp.register_callback_query_handler(
-        filters_manager.remove_tag, Text(endswith="_list_menu"), state=ProfileStates.gigs
+        filters_manager.set_time, Text(startswith=["latest", "oldest"]), state=FiltersStates.time_filter
     )
     dp.register_callback_query_handler(
-        filters_manager.filters_menu, Text(equals=Filters.ready_callback), state=ProfileStates.gigs
+        filters_manager.location_filter, Text(equals=Filters.city_callback), state=FiltersStates.filters
     )
     dp.register_message_handler(
-        filters_manager.add_tag, state=ProfileStates.gigs
+        filters_manager.set_location, state=FiltersStates.location_filter
+    )
+    dp.register_callback_query_handler(
+        filters_manager.tags_filter, Text(equals=Filters.tags_callback), state=FiltersStates.filters
+    )
+    dp.register_callback_query_handler(
+        filters_manager.remove_tag, Text(endswith="_list_menu"), state=FiltersStates.tags_filter
+    )
+    dp.register_message_handler(
+        filters_manager.add_tag, state=FiltersStates.tags_filter
+    )
+    dp.register_callback_query_handler(
+        filters_manager.filters_menu, Text(equals=Filters.ready_callback), state=FiltersStates.time_filter
+    )
+    dp.register_callback_query_handler(
+        filters_manager.filters_menu, Text(equals=Filters.ready_callback), state=FiltersStates.location_filter
+    )
+    dp.register_callback_query_handler(
+        filters_manager.filters_menu, Text(equals=Filters.ready_callback), state=FiltersStates.tags_filter
+    )
+    dp.register_callback_query_handler(
+        MarketplaceMH.request, Text(equals=Filters.backward_callback), state=FiltersStates.filters
     )
     # dp.register_callback_query_handler(
     #     MyProfileMH.my_gigs, Text(equals=Filters.backward_callback), state=ProfileStates.gigs

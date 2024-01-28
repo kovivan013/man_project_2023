@@ -1,4 +1,5 @@
 import asyncio
+import requests
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
 from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest
@@ -97,10 +98,35 @@ class LocationAPI(API):
         return await GetRequest(url=url,
                                 data=data).send_request()
 
+    @classmethod
+    async def get_location(cls, name: str) -> 'DataStructure':
+        url: str = "https://nominatim.openstreetmap.org/search.php"
+
+        data: dict = {
+            "format": "json",
+            "city": name,
+            "country": "Ukraine"
+        }
+
+        response = requests.get(url, params=data).json()
+        if response:
+            response_data: dict = {
+                "latitude": float(response[0]['lat']),
+                "longitude": float(response[0]['lon']),
+            }
+
+
+        return response_data
+
+
+
+
 
 # import asyncio
-# r = asyncio.run(UserAPI.get_user_gigs(telegram_id=1125858430))
+# r = asyncio.run(LocationAPI.get_location(name="Нью йорк"))
 # print(r)
+# r2 = asyncio.run(LocationAPI.get_address(**r))
+# print(r2)
 # print(r.model_dump())
 # import asyncio
 # r = asyncio.run(UserAPI.get_gigs(type="co"))

@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List, Dict, Union
 
 from enum import Enum
 
@@ -70,8 +70,10 @@ class BaseGig(BaseModel):
     data: GigData = GigData()
 
 class GigsResponse(BaseModel):
+    key: Union[int, str] = ""
     pages: int = 0
     page: int = 0
+    gigs: int = 0
     next_page: int = 0
     previous_page: int = 0
 

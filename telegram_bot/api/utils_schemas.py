@@ -48,18 +48,23 @@ class LocationStructure:
     def __init__(self, location: dict) -> None:
         self.location = location
 
-    async def get_city(self, with_type: bool = False):
+    async def get_city(self, with_type: bool = False, case: int = 0):
         address: dict = self.location["address"]
 
-        keys: dict = {"city": {"type": "місто"},
-                      "town": {"type": "місто"},
-                      "village": {"type": "село"},
-                      "municipality": {"type": ""}}
+        keys: dict = {
+            "city": {0: "місто",
+                     1: "міста"},
+            "town": {0: "місто",
+                     1: "міста"},
+            "village": {0: "село",
+                        1: "села"},
+            "municipality": {0: ""}
+        }
 
         for i, v in keys.items():
             if i in address.keys():
                 city: dict = {
-                    "type": v['type'] if with_type and v['type'] else '',
+                    "type": v[case] if with_type and v[case] else '',
                     "name": address[i]
                 }
                 # city: dict = [v['type'] + ' ' if with_type and v['type'] else '', address[i]]
