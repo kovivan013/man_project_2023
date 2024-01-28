@@ -15,3 +15,8 @@ InvalidInputData = HTTPException(
     status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
     detail="Invalid input data"
 )
+
+NoAccess = HTTPException(
+    status_code=status.HTTP_403_FORBIDDEN,
+    detail="No access to content"
+)

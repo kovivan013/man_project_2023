@@ -182,11 +182,13 @@ class Filters(Controls, YesOrNo):
     time: str = f"⏰ За часом"
     city: str = f"📍 За місцем"
     tags: str = f"🏷️ За тегами"
+    reset_city: str = f"🔄 Скинути фільтр"
 
     placeholder_callback: str = f"filters_placeholde_callback"
     time_callback: str = f"time_callback"
     city_callback: str = f"city_callback"
     tags_callback: str = f"tags_callback"
+    reset_city_callback: str = f"reset_city_callback"
 
     @classmethod
     def keyboard(cls, time: str = "latest", city: str = "all",
@@ -253,9 +255,11 @@ class Filters(Controls, YesOrNo):
 
     @classmethod
     def location_keyboard(cls) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard()
+        keyboard = default_inline_keyboard(row_width=1)
 
         keyboard.add(
+            InlineKeyboardButton(text=cls.reset_city,
+                                 callback_data=cls.reset_city_callback),
             InlineKeyboardButton(text=cls.ready,
                                  callback_data=cls.ready_callback)
         )
@@ -795,7 +799,7 @@ class MarketplaceMenu(Filters, MainMenu):
 
         keyboard.add(
             InlineKeyboardButton(text=cls.backward,
-                                 callback_data=cls.backward_callback)
+                                 callback_data="back_to_main")
         )
 
         if with_search:

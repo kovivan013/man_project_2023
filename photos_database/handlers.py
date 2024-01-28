@@ -1,4 +1,5 @@
 import os
+import shutil
 from aiogram.types import Message
 from man_project_2023.telegram_bot.config import Bot, bot
 
@@ -30,9 +31,12 @@ class PhotosDB:
         os.makedirs(profile)
 
     @classmethod
-    async def delete(cls, telegram_id: int):
+    async def remove_gig(cls, telegram_id: int, gig_id: str):
         user = cls.join(cls.__BASE_DIR, telegram_id)
-        os.removedirs(user)
+        gigs = cls.join(user, "gigs")
+        gig = cls.join(gigs, gig_id)
+
+        shutil.rmtree(gig)
 
     @classmethod
     async def save(cls, telegram_id: int, file_id: str, gig_id: str):
@@ -57,10 +61,10 @@ class PhotosDB:
         print(gig)
         return open(f"{gig}\preview.jpg", "rb")
 
-#
+
 # import asyncio
 #
-# asyncio.run(PhotosDB().register(telegram_id=1125858430))
+# asyncio.run(PhotosDB.remove_gig(telegram_id=1125858430, gig_id="f336392d-7722-4e0b-8195-d5a9da49c064"))
 
 # def register(user_id):
 #     user_dir = os.path.join(BASE_DIR, user_id.__str__())

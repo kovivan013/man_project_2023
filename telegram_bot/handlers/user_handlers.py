@@ -82,6 +82,7 @@ class MarketplaceMH:
     async def search(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await current_state.set_state(state)
         await MarketplaceStates.search_input.set()
+        await filters_manager.reset_filters(state)
         await context_manager.edit(state=state,
                                    current_state=current_state,
                                    text="🔍 *Уведіть пошуковий запит:*",
@@ -116,22 +117,6 @@ class MarketplaceMH:
                                    with_placeholder=False)
         await marketplace.send_gigs(state)
         doc = await marketplace._document(state)
-
-    # @classmethod
-    # async def back_to_current(cls, callback: CallbackQuery, state: FSMContext) -> None:
-    #     await MarketplaceStates.gigs_list.set()
-    #     request = await marketplace._document(state)
-    #     await marketplace.get_gigs(state=state,
-    #                                request=request.key)
-    #     document = await marketplace._document(state)
-    #     await context_manager.edit(state=state,
-    #                                text=f"🗒️ За Вашим пошуковим запитом було знайдено *{document.gigs}* оголошень!",
-    #                                image="gigs_list",
-    #                                reply_markup=MarketplaceMenu.keyboard(page=document.page,
-    #                                                                      pages=document.pages),
-    #                                with_placeholder=False)
-    #     await marketplace.send_gigs(state)
-    #     doc = await marketplace._document(state)
 
     @classmethod
     async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -237,8 +222,7 @@ class MyProfileMH:
                                    current_state=current_state,
                                    image="your_gigs",
                                    reply_markup=MyProfile.gigs_keyboard(page=document.page,
-                                                                        pages=document.pages),
-                                   with_placeholder=False)
+                                                                        pages=document.pages))
         await marketplace.get_user_gigs(state=state,
                                         telegram_id=state.user,
                                         page=document.page,
@@ -692,6 +676,9 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_message_handler(
         filters_manager.set_location, state=FiltersStates.location_filter
+    )
+    dp.register_callback_query_handler(
+        filters_manager.reset_location, Text(equals=Filters.reset_city_callback), state=FiltersStates.location_filter
     )
     dp.register_callback_query_handler(
         filters_manager.tags_filter, Text(equals=Filters.tags_callback), state=FiltersStates.filters

@@ -885,6 +885,13 @@ class FiltersManager(Storage):
         storage: self = await self._storage(state)
         return storage
 
+    async def reset_filters(self, state: FSMContext):
+        storage: self = await self._storage(state)
+        storage.time = "latest"
+        storage.city = "all"
+        storage.tags = []
+        await self._save(state, storage)
+
     async def filters_menu(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.filters.set()
         storage: self = await self._storage(state)
@@ -951,6 +958,13 @@ class FiltersManager(Storage):
             with_placeholder=False
         )
         await storage._save(state, storage)
+
+    async def reset_location(self, callback: CallbackQuery, state: FSMContext):
+        storage: self = await self._storage(state)
+        storage.city = "all"
+        await self._save(state, storage)
+        await self.filters_menu(callback=callback,
+                                state=state)
 
     async def tags_filter(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.tags_filter.set()
@@ -1109,7 +1123,6 @@ class Marketplace(Storage):
                                           type=type)
         if response._success:
             response_messages: list = []
-
             gigs = response.data["gigs"]
             document = GigsResponse().model_validate(response.data["response"])
             storage.document = document

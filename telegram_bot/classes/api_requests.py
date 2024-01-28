@@ -2,7 +2,7 @@ import asyncio
 import requests
 
 from man_project_2023.telegram_bot.config import BASE_API_URL
-from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest
+from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DeleteRequest
 from man_project_2023.utils.schemas.schemas import DataStructure
 from man_project_2023.utils.schemas.api_schemas import GigCreate, UserCreate, BaseUser, BaseGig
 from man_project_2023.telegram_bot.api.utils_schemas import LocationStructure
@@ -12,7 +12,7 @@ class API:
     __BASE_SERVER_URL: str = BASE_API_URL
 
     @classmethod
-    async def _get_request(cls, endpoint: str, data: dict = None):
+    async def _get_request(cls, endpoint: str, data: dict = {}):
         url: str = cls.__BASE_SERVER_URL + endpoint
         return await GetRequest(url=url,
                                 data=data).send_request()
@@ -28,6 +28,12 @@ class API:
         url: str = cls.__BASE_SERVER_URL + endpoint
         return await PatchRequest(url=url,
                                   data=data).send_request()
+
+    @classmethod
+    async def _delete_request(cls, endpoint: str, data: dict = {}):
+        url: str = cls.__BASE_SERVER_URL + endpoint
+        return await DeleteRequest(url=url,
+                                   data=data).send_request()
 
 
 class UserAPI(API):
@@ -61,6 +67,16 @@ class UserAPI(API):
                        page: int = 1, from_date: str = "latest", type: str = "active"):
         endpoint: str = cls.__prefix(f"/v2/gigs/?title={request}{f'&city={city}' if city else ''}&limit={limit}&page={page}&from_date={from_date}&type={type}")
         return await cls._get_request(endpoint=endpoint)
+
+    @classmethod
+    async def get_gig(cls, telegram_id: int, gig_id: str):
+        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs/{gig_id}")
+        return await cls._get_request(endpoint=endpoint)
+
+    @classmethod
+    async def delete_gig(cls, telegram_id: int, gig_id: str):
+        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs/{gig_id}")
+        return await cls._delete_request(endpoint=endpoint)
 
     @classmethod
     async def update_description(cls, data: dict) -> 'DataStructure':
@@ -123,7 +139,7 @@ class LocationAPI(API):
 
 
 # import asyncio
-# r = asyncio.run(LocationAPI.get_location(name="Нью йорк"))
+# r = asyncio.run(UserAPI.delete_gig(telegram_id=1125858430, gig_id="bf93dd85-f8f4-4546-8303-9c765c354b20"))
 # print(r)
 # r2 = asyncio.run(LocationAPI.get_address(**r))
 # print(r2)

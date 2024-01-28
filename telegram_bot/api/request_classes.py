@@ -83,3 +83,16 @@ class PatchRequest(RequestSender):
                 status=response.status,
                 data=await response.json()
             )
+
+class DeleteRequest(RequestSender):
+    def __init__(self, url: str = "", data: dict = None):
+        super().__init__(url)
+        self._data_for_send: dict = data
+
+    async def _send(self, session):
+        self._payload.update(json=self._data_for_send)
+        async with session.delete(**self._payload) as response:
+            return ResponseStructure(
+                status=response.status,
+                data=await response.json()
+            )

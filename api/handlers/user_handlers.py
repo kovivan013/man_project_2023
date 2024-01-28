@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, Response, Request, Query
 from starlette import status
 from sqlalchemy.orm import Session
 
+from man_project_2023.photos_database.handlers import PhotosDB
+
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
@@ -83,16 +85,10 @@ def get_all_users(response: Response, db: Session = Depends(get_db)):
 @user_router.get("/all_gigs/")
 def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):
     result = DataStructure()
-    # users = db.query(User).all()
+    document = GigsResponse()
     gigs = db.query(User.gigs).all()
     all_gigs: list = []
-    # for i in users:
-    #     user = BaseUser().model_validate(i.as_dict())
-    #     if active := user.gigs.active:
-    #         for j, k in active.items():
-    #             result.data.update({
-    #                 j: k
-    #             })
+
     for i in gigs:
         user = BaseUser().gigs.model_validate(i[0])
         if values := getattr(user, f"{type.value}"):
@@ -115,7 +111,15 @@ def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsE
                     gig_id: data
                 })
 
+    rest = 0
+    if len(all_gigs) % limit:
+        rest = 1
 
+    document.gigs = len(all_gigs)
+    document.pages = len(all_gigs) // limit + rest
+    document.page = page
+
+    result.data["response"] = document
     result._status = status.HTTP_200_OK
 
     db.close()
@@ -129,6 +133,7 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
     response: dict = {}
     gigs = db.query(User.gigs).all()
     all_gigs: list = []
+    result.data["gigs"] = {}
 
     for i in gigs:
         user = BaseUser().gigs.model_validate(i[0])
@@ -166,14 +171,6 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
                                     path=["data", "date"],
                                     reverse=from_date._value)
         response.clear()
-        result.data["gigs"] = {}
-
-        document.key = title
-        document.gigs = len(sorted_gigs)
-        document.pages = len(sorted_gigs) // limit + 1
-        document.page = page
-
-        result.data["response"] = document
 
         for i, v in enumerate(sorted_gigs.items()):
             if i in range(start, end):
@@ -181,6 +178,17 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
                 result.data["gigs"].update({
                     gig_id: data
                 })
+
+    rest = 0
+    if len(all_gigs) % limit:
+        rest = 1
+
+    document.key = title
+    document.gigs = len(all_gigs)
+    document.pages = len(all_gigs) // limit + rest
+    document.page = page
+
+    result.data["response"] = document
 
     result._status = status.HTTP_200_OK
 
@@ -286,6 +294,68 @@ def get_user_gigs(telegram_id: int,
 
     db.close()
     return result
+
+@user_router.get("/{telegram_id}/gigs/{gig_id}")
+def get_gig(telegram_id: int,
+            gig_id: str,
+            db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+
+    if user is None:
+        return Reporter.api_exception(exceptions.ItemNotFoundException)
+
+    gigs = BaseUser().gigs.model_validate(user.gigs).model_dump()
+    all_gigs: dict = {}
+    for i in gigs.values():
+        for j, k in i.items():
+            all_gigs.update({
+                j: k
+            })
+
+    if gig_id not in all_gigs:
+        return Reporter.api_exception(exceptions.ItemNotFoundException)
+
+    result.data = all_gigs[gig_id]
+    result._status = status.HTTP_200_OK
+
+    db.close()
+    return result
+
+@user_router.delete("/{telegram_id}/gigs/{gig_id}")
+def delete_gig(telegram_id: int,
+               gig_id: str,
+               db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+
+    if user is None:
+        return Reporter.api_exception(exceptions.ItemNotFoundException)
+
+    gigs = BaseUser().gigs.model_validate(user.gigs)
+    active_gigs = gigs.active
+
+    if gig_id not in active_gigs:
+        return Reporter.api_exception(exceptions.ItemNotFoundException)
+
+    gig = BaseGig().model_validate(active_gigs[gig_id])
+    if gig.telegram_id != telegram_id:
+        return Reporter.api_exception(exceptions.NoAccess)
+
+    active_gigs.pop(gig_id)
+    gigs.archived.update({
+        gig_id: gig.model_dump()
+    })
+
+    user.gigs = gigs.model_dump()
+    db.commit()
+
+    result.data = gig.model_dump()
+    result._status = status.HTTP_200_OK
+
+    db.close()
+    return result
+
 
 
 @user_router.get("/{telegram_id}/user_data")
