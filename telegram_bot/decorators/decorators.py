@@ -57,31 +57,34 @@ class HistoryManager(Storage):
     def __init__(self, history: dict = {}):
         self.history = history
 
-    def register(self, group: str, onetime: bool = False):
+    def register(self, group: Union[str, list], onetime: bool = False):
         def wrapper(func: Callable, _state: FSMContext = None) -> Callable:
             @wraps(func)
             async def wrap(*args, **kwargs) -> Any:
                 state: FSMContext = _state if _state else kwargs["state"]
                 storage: self = await self._storage(state)
-                try:
-                    await func(*args, **kwargs)
-                    data: dict = storage.history.setdefault(group, {"history": {}})
-                    last_index = max(data["history"], default=0) + 1
-                    if onetime and last_index > 1:
-                        last_index -= 1
-                        value = data["history"][last_index]
-                        data["history"] = {1: value}
-                    data["onetime"] = onetime
-                    data["history"].update({
-                        last_index: {
-                            "func": func,
-                            "args": args,
-                            "kwargs": kwargs
-                        }
-                    })
-                    storage.history[group].update(data)
-                except Exception as err:
-                    print(f"ERROR in {self.register}: ", err)
+                if not isinstance(instance := group, list):
+                    instance = [group]
+                await func(*args, **kwargs)
+                for i in instance:
+                    try:
+                        data: dict = storage.history.setdefault(i, {"history": {}})
+                        last_index = max(data["history"], default=0) + 1
+                        if onetime and last_index > 1:
+                            last_index -= 1
+                            value = data["history"][last_index]
+                            data["history"] = {1: value}
+                        data["onetime"] = onetime
+                        data["history"].update({
+                            last_index: {
+                                "func": func,
+                                "args": args,
+                                "kwargs": kwargs
+                            }
+                        })
+                        storage.history[i].update(data)
+                    except Exception as err:
+                        print(f"ERROR in {self.register}: ", err)
                 await self._save(state, storage)
             return wrap
         return wrapper

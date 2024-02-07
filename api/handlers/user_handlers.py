@@ -10,7 +10,7 @@ from man_project_2023.photos_database.handlers import PhotosDB
 from man_project_2023.api.db_connect.db_connect import get_db
 from man_project_2023.api.models.models import User
 from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse
+from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode
 from man_project_2023.utils.debug import exceptions
 from man_project_2023.utils.debug.errors_reporter import Reporter
 from man_project_2023.api.utils.utils import Utils
@@ -380,10 +380,26 @@ def user_mode(telegram_id: int, db: Session = Depends(get_db)):
     if user is None:
         raise exceptions.ItemNotFoundException
 
+    result.data = Mode(mode=user.mode).model_dump()
     result._status = status.HTTP_200_OK
 
     db.close()
-    return user.mode
+    return result
+
+@user_router.patch("/{telegram_id}/mode")
+def update_user_mode(telegram_id: int, request_data: UpdateMode, db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+    if user is None:
+        raise exceptions.ItemNotFoundException
+
+    user.mode = request_data.mode
+    result.data = request_data.model_dump()
+    result._status = status.HTTP_200_OK
+
+    db.commit()
+    db.close()
+    return result
 
 @user_router.delete("/{telegram_id}/delete_gigs")
 def delete_gigs(telegram_id: int, db: Session = Depends(get_db)):

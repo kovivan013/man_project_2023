@@ -85,9 +85,16 @@ class UserAPI(API):
                                         data=data)
 
     @classmethod
-    async def get_user_mode(cls, telegram_id: int):
+    async def get_mode(cls, telegram_id: int, mode_only: bool = True) -> 'DataStructure':
         endpoint: str = cls.__prefix(f"/{telegram_id}/mode")
-        return await cls._get_request(endpoint=endpoint)
+        answer = await cls._get_request(endpoint=endpoint)
+        return answer.data["mode"] if mode_only else answer
+
+    @classmethod
+    async def update_mode(cls, telegram_id: int, data: dict) -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}/mode")
+        return await cls._patch_request(endpoint=endpoint,
+                                        data=data)
 
 
 class AdminAPI(API):
@@ -131,14 +138,15 @@ class LocationAPI(API):
                 "longitude": float(response[0]['lon']),
             }
 
-
-        return response_data
+            return response_data
+        return None
 
 
 
 
 
 # import asyncio
+
 # r = asyncio.run(UserAPI.delete_gig(telegram_id=1125858430, gig_id="bf93dd85-f8f4-4546-8303-9c765c354b20"))
 # print(r)
 # r2 = asyncio.run(LocationAPI.get_address(**r))

@@ -2,7 +2,7 @@ import asyncio
 import datetime
 from pydantic import BaseModel
 
-from typing import List, ClassVar, Union
+from typing import List, Union, Callable
 
 from man_project_2023.telegram_bot.config import dp, Dispatcher
 
@@ -11,8 +11,8 @@ from aiogram.types import InputMediaPhoto, InputFile
 from man_project_2023.telegram_bot.config import bot
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI, LocationAPI
 from man_project_2023.telegram_bot.keyboards.keyboards import (
-    YesOrNo, Controls, MyProfile, Navigation, Filters, DropdownMenu, UpdateProfile,
-    InlineKeyboardMarkup, CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
+    YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile, InlineKeyboardMarkup,
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
 )
 from man_project_2023.telegram_bot.states.states import FiltersStates
 from man_project_2023.telegram_bot.utils.utils import Utils
@@ -385,17 +385,23 @@ class ContextManager(Storage):
             storage.current_state = current_state
         edited_message: Message = None
 
+        keyboard = reply_markup
+
         if with_placeholder:
             keyboard = DropdownMenu.placeholder_menu(
-                    current_menu=await storage.current_state.get_placeholder(
-                        state=state
-                    )
+                current_menu=await storage.current_state.get_placeholder(
+                    state=state
+                )
             )
-            if reply_markup is not None:
-                for i in reply_markup.inline_keyboard:
-                    keyboard.inline_keyboard.append(i)
-        else:
-            keyboard = reply_markup
+        if reply_markup is not None:
+            keyboard = InlineKeyboardMarkup()
+            if not isinstance(instance := reply_markup, list):
+                instance = [reply_markup]
+            for i in instance:
+                for v in i.inline_keyboard:
+                    keyboard.inline_keyboard.append(v)
+
+
 
 
         try:
@@ -740,7 +746,7 @@ class Marketplace(Storage):
             return document
         return None
 
-    async def send_gigs(self, state: FSMContext):
+    async def send_gigs(self, state: FSMContext, reply_markup: Callable):
         # cls, state: FSMContext, request: str = "",
         # telegram_id: int = 0, city: str = "", limit: int = 5, page: int = 1,
         # from_date: str = "latest", type: str = "active", from_saved: bool = False
@@ -772,8 +778,8 @@ class Marketplace(Storage):
                                              photo=InputFile(PhotosDB.get(telegram_id=gig.telegram_id,
                                                                           gig_id=gig.id)),
                                              caption=gig.text,
-                                             reply_markup=GigContextMenu.keyboard(telegram_id=gig.telegram_id,
-                                                                                  gig_id=gig.id),
+                                             reply_markup=reply_markup(telegram_id=gig.telegram_id,
+                                                                       gig_id=gig.id),
                                              parse_mode="Markdown",
                                              disable_notification=True)
             )

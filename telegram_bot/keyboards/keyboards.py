@@ -5,7 +5,6 @@ from typing import Union
 from dataclasses import dataclass
 import datetime
 
-
 def default_reply_keyboard(one_time_keyboard: bool = True,
                            resize_keyboard: bool = True,
                            row_width: int = 2):
@@ -266,52 +265,6 @@ class Filters(Controls, YesOrNo):
 
         return keyboard
 
-@dataclass(frozen=True)
-class DropdownMenu:
-    # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
-    #
-    # такого же типа с галочкой, но для меню без показа количества найденных вариантов по фильтру
-    #
-    # режим select (можно выбрать несколько вариантов чего-то например для удаления)
-
-    # TODO: Возможно уберу, поскольку это в тексте сообщения + На пк - лучше как сейчас, на телефона и так и так
-    filters_sign: str = f"Оберіть необхідний фільтр ✅"
-    menu_sign: str = f"Оберіть необхідне меню 💻"
-    select_sign: str = f"Оберіть потрібні варіанти 🔑"
-
-    callback_data: str = f"none"
-
-    @classmethod
-    def placeholder_menu(cls, current_menu: dict):
-        keyboard = default_inline_keyboard()
-
-        keyboard.add(
-            InlineKeyboardButton(text=f"↩ На головну",
-                                 callback_data="back_to_main"),
-            InlineKeyboardButton(text=f"Режим 🔦",
-                                 callback_data="change_mode"),
-            InlineKeyboardButton(**current_menu)
-        )
-
-        return keyboard
-
-    @classmethod
-    def menu_keyboard(cls, buttons: list) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard()
-
-        # keyboard.add(
-        #     InlineKeyboardButton(text=cls.menu_sign,
-        #                          callback_data=cls.callback_data)
-        # )
-
-        for i in buttons:
-            for data in i:
-                keyboard.insert(
-                    InlineKeyboardButton(**data)
-                )
-
-        return {"inline_keyboard": buttons}
-
 class ListMenu(YesOrNo, Controls):
     """
     Вызывать если нужно ввести список элементов, например список тегов
@@ -389,17 +342,17 @@ class MainMenu:
 
     @classmethod
     def keyboard(cls, mode: int = 0) -> Union[InlineKeyboardMarkup]:
-        keyboard = default_inline_keyboard() # Визначення об'єкта клавіатури
+        keyboard = default_inline_keyboard()
 
         modes: dict = {
             0: "Шукача 🔦",
             1: "Детектива 🔍"
-        } # Словник із назвами режимів користувача
+        }
 
         keyboard.add(
             InlineKeyboardButton(text=f"{cls.change_mode} {modes[mode]}",
                                  callback_data=cls.change_mode_callback)
-        ) # Додавання кнопкт для зміни режиму користувача
+        )
 
         if mode:
             keyboard.add(
@@ -410,9 +363,7 @@ class MainMenu:
             keyboard.add(
                 InlineKeyboardButton(text=cls.search,
                                      callback_data=cls.search_callback)
-            ) # Розгалудження, яке використовуючи переданий аргумент "mode" визначає,
-            # у якому режимі зараз знаходиться користувач та в залежності від цього
-            # створює кнопки для клавіатури
+            )
 
         keyboard.add(
             InlineKeyboardButton(text=cls.profile,
@@ -423,41 +374,84 @@ class MainMenu:
                                  callback_data=cls.support_callback),
             InlineKeyboardButton(text=cls.info_about,
                                  callback_data=cls.info_about_callback)
-        ) # Додавання кнопок до клавіатури
-
-        return keyboard # Повернення об'єкта клавіатури для подальшого використання
-
-# TODO: Нужно разделить на 2 класса потерявшего и нашедшего, буду смотреть по ситуации
-@dataclass(frozen=True)
-class Navigation:
-
-    # general buttons
-    settings: str = f"Налаштування ⚙️"
-    profile: str = f"Мій Профіль 👤"
-    gigs: str = f"Оголошення 🗞️"
-
-    #finder buttons
-    dashboard: str = f"Панель Детектива 🔦"
-
-    # seeker buttons
-    marketplace: str = f"Маркетплейс 🔎"
-
-    @classmethod
-    def finder_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-        reply_keyboard = default_reply_keyboard(one_time_keyboard=False)
-
-        reply_keyboard.add(
-            KeyboardButton(text=cls.dashboard),
-            KeyboardButton(text=cls.profile),
-            KeyboardButton(text=cls.gigs),
-            KeyboardButton(text=cls.settings)
         )
 
-        return reply_keyboard
+        return keyboard
+
+# @dataclass(frozen=True)
+# class Navigation:
+#
+#     # general buttons
+#     settings: str = f"Налаштування ⚙️"
+#     profile: str = f"Мій Профіль 👤"
+#     gigs: str = f"Оголошення 🗞️"
+#
+#     #finder buttons
+#     dashboard: str = f"Панель Детектива 🔦"
+#
+#     # seeker buttons
+#     marketplace: str = f"Маркетплейс 🔎"
+#
+#     @classmethod
+#     def finder_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
+#         reply_keyboard = default_reply_keyboard(one_time_keyboard=False)
+#
+#         reply_keyboard.add(
+#             KeyboardButton(text=cls.dashboard),
+#             KeyboardButton(text=cls.profile),
+#             KeyboardButton(text=cls.gigs),
+#             KeyboardButton(text=cls.settings)
+#         )
+#
+#         return reply_keyboard
+#
+#     @classmethod
+#     def seeker_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
+#         pass
+
+class DropdownMenu(MainMenu):
+    # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
+    #
+    # такого же типа с галочкой, но для меню без показа количества найденных вариантов по фильтру
+    #
+    # режим select (можно выбрать несколько вариантов чего-то например для удаления)
+
+    # TODO: Возможно уберу, поскольку это в тексте сообщения + На пк - лучше как сейчас, на телефона и так и так
+    filters_sign: str = f"Оберіть необхідний фільтр ✅"
+    menu_sign: str = f"Оберіть необхідне меню 💻"
+    select_sign: str = f"Оберіть потрібні варіанти 🔑"
+
+    callback_data: str = f"none"
 
     @classmethod
-    def seeker_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-        pass
+    def placeholder_menu(cls, current_menu: dict, mode: int = 0):
+        keyboard = default_inline_keyboard()
+        modes: dict = {
+            0: "🔦",
+            1: "🔍"
+        }
+
+        keyboard.add(
+            InlineKeyboardButton(text=f"↩ На головну",
+                                 callback_data="back_to_main"),
+            InlineKeyboardButton(text=f"Режим {modes[mode]}",
+                                 callback_data=cls.change_mode_callback),
+            InlineKeyboardButton(**current_menu)
+        )
+
+        return keyboard
+
+    @classmethod
+    def menu_keyboard(cls, buttons: list) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        for i in buttons:
+            for data in i:
+                keyboard.insert(
+                    InlineKeyboardButton(**data)
+                )
+
+        return {"inline_keyboard": buttons}
 
 
 class MyProfile(MainMenu, Controls):
@@ -729,40 +723,35 @@ class GigContextMenu:
         keyboard = default_inline_keyboard()
 
         callback_value: str = f"{telegram_id}_{gig_id}"
-        if not open:
-            keyboard.add(
-                InlineKeyboardButton(text=cls.placeholder,
-                                     callback_data=f"{callback_value}{cls.placeholder_callback}")
-            )
-
-            return keyboard
-
-        keyboard.add(
-            InlineKeyboardButton(text=cls.back,
-                                 callback_data=cls.back_callback)
-        )
+        # if not open:
+        #     keyboard.add(
+        #         InlineKeyboardButton(text=cls.placeholder,
+        #                              callback_data=f"{callback_value}{cls.placeholder_callback}")
+        #     )
+        #
+        #     return keyboard
+        #
+        # keyboard.add(
+        #     InlineKeyboardButton(text=cls.back,
+        #                          callback_data=cls.back_callback)
+        # )
         keyboard.add(
             InlineKeyboardButton(text=cls.preview,
                                  callback_data=f"{callback_value}{cls.preview_callback}"),
             InlineKeyboardButton(text=cls.stop,
-                                 callback_data=f"{callback_value}{cls.stop_callback}"),
-            InlineKeyboardButton(text=cls.stats,
-                                 callback_data=f"{callback_value}{cls.stats_callback}"),
-            InlineKeyboardButton(text=cls.share,
-                                 callback_data=f"{callback_value}{cls.share_callback}")
+                                 callback_data=f"{callback_value}{cls.stop_callback}")
         )
 
         return keyboard
 
     @classmethod
-    def m_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+    def marketplace_keyboard(cls, telegram_id: int = 0, gig_id: int = 0) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard()
+        callback_value: str = f"{telegram_id}_{gig_id}"
 
         keyboard.add(
             InlineKeyboardButton(text=cls.detail,
-                                 callback_data=cls.detail_callback),
-            InlineKeyboardButton(text=cls.share,
-                                 callback_data=cls.share_callback)
+                                 callback_data=f"{callback_value}{cls.detail_callback}")
         )
 
         return keyboard
