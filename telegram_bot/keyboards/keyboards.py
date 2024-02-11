@@ -122,7 +122,6 @@ class YesOrNo:
         return reply_keyboard
 
 
-@dataclass(frozen=True)
 class Controls:
     # TODO: Controls Menu Param types: [LIST, DICT, TUPLE]
 
@@ -173,7 +172,6 @@ class Controls:
 
 
 
-@dataclass(frozen=True)
 class Filters(Controls, YesOrNo):
 
     placeholder: str = f"🎛️ Фільтри"
@@ -182,6 +180,13 @@ class Filters(Controls, YesOrNo):
     city: str = f"📍 За місцем"
     tags: str = f"🏷️ За тегами"
     reset_city: str = f"🔄 Скинути фільтр"
+
+    types: dict = {
+        "active": lambda c: f"Активні оголошення ({c})",
+        "completed": lambda c: f"Завершені оголошення ({c})",
+        "pending": lambda c: f"Очікують публікації ({c})",
+        "archived": lambda c: f"Видалені оголошення ({c})"
+    }
 
     placeholder_callback: str = f"filters_placeholde_callback"
     time_callback: str = f"time_callback"
@@ -262,6 +267,18 @@ class Filters(Controls, YesOrNo):
             InlineKeyboardButton(text=cls.ready,
                                  callback_data=cls.ready_callback)
         )
+
+        return keyboard
+
+    @classmethod
+    def types_keyboard(cls, current_type: Union[str, int], types_count: dict):
+        keyboard = default_inline_keyboard(row_width=1)
+
+        for i, v in cls.types.items():
+            keyboard.add(
+                InlineKeyboardButton(text=f"{'✅ ' if i == current_type else ''}{v(types_count[i])}",
+                                     callback_data=f"{i}_type_callback")
+            )
 
         return keyboard
 
@@ -378,36 +395,17 @@ class MainMenu:
 
         return keyboard
 
-# @dataclass(frozen=True)
-# class Navigation:
-#
-#     # general buttons
-#     settings: str = f"Налаштування ⚙️"
-#     profile: str = f"Мій Профіль 👤"
-#     gigs: str = f"Оголошення 🗞️"
-#
-#     #finder buttons
-#     dashboard: str = f"Панель Детектива 🔦"
-#
-#     # seeker buttons
-#     marketplace: str = f"Маркетплейс 🔎"
-#
-#     @classmethod
-#     def finder_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-#         reply_keyboard = default_reply_keyboard(one_time_keyboard=False)
-#
-#         reply_keyboard.add(
-#             KeyboardButton(text=cls.dashboard),
-#             KeyboardButton(text=cls.profile),
-#             KeyboardButton(text=cls.gigs),
-#             KeyboardButton(text=cls.settings)
-#         )
-#
-#         return reply_keyboard
-#
-#     @classmethod
-#     def seeker_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
-#         pass
+    @classmethod
+    def add_gig_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.add_gig,
+                                 callback_data=cls.add_gig_callback)
+        )
+
+        return keyboard
+
 
 class DropdownMenu(MainMenu):
     # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
@@ -468,6 +466,7 @@ class MyProfile(MainMenu, Controls):
 
     update_callback: str = f"update_callback"
     share_callback: str = f"share_callback"
+    change_type_callback = "change_type_callback"
 
     @classmethod
     def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
@@ -483,19 +482,17 @@ class MyProfile(MainMenu, Controls):
         return keyboard
 
     @classmethod
-    def gigs_keyboard(cls, page: int, pages: int) -> Union[InlineKeyboardMarkup]:
+    def gigs_keyboard(cls, gigs_type: Union[str, int], type_count: int, page: int, pages: int) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
 
         keyboard.add(
-            InlineKeyboardButton(text=cls.add_gig,
-                                 callback_data=cls.add_gig_callback)
+            InlineKeyboardButton(text=f"{Filters.types[gigs_type](type_count)} ▼",
+                                 callback_data=cls.change_type_callback)
         )
         keyboard.row(*cls.pages_keyboard(page=page,
                                          pages=pages))
 
         return keyboard
-
-
 
 
 class UpdateProfile(Controls, YesOrNo):

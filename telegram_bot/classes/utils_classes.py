@@ -479,10 +479,11 @@ class FiltersManager(Storage):
         "oldest": "старих",
     }
 
-    def __init__(self, time: str = "latest", city: str = "all", tags: list = []):
+    def __init__(self, time: str = "latest", city: str = "all", tags: list = [], gigs_type: str = "active"):
         self.time = time
         self.city = city
         self.tags = tags
+        self.gigs_type = gigs_type
 
     async def get_filters(self, state: FSMContext):
         storage: self = await self._storage(state)
@@ -598,7 +599,6 @@ class FiltersManager(Storage):
     async def remove_tag(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state)
         element = callback.data[:callback.data.rindex("_list_menu")]
-
         if element in storage.tags:
             storage.tags.remove(element)
             await self._save(state, storage)
@@ -608,6 +608,29 @@ class FiltersManager(Storage):
                     with_ready=True
                 )
             )
+
+    async def type_filter(self, callback: CallbackQuery, state: FSMContext):
+        document = await marketplace._document(state)
+        await callback.message.edit_reply_markup(
+            reply_markup=Filters.types_keyboard(
+                current_type=document.status,
+                types_count=document.count.model_dump()
+            )
+        )
+
+    async def set_type(self, callback: CallbackQuery, state: FSMContext):
+        from man_project_2023.telegram_bot.decorators.decorators import history_manager
+        storage: self = await self._storage(state)
+        document = await marketplace._document(state)
+        storage.gigs_type = callback.data.split("_")[0]
+        if document.status != storage.gigs_type:
+            await marketplace.get_user_gigs(state=state,
+                                            telegram_id=state.user,
+                                            mode=await UserAPI.get_mode(telegram_id=state.user),
+                                            limit=2)
+        await self._save(state, storage)
+        await history_manager.back(state=state,
+                                   group="select_type")
 
 filters_manager = FiltersManager()
 
@@ -672,7 +695,7 @@ class Marketplace(Storage):
 
         return time
 
-    async def get_user_gigs(self, state: FSMContext, telegram_id: int,
+    async def get_user_gigs(self, state: FSMContext, telegram_id: int, mode: int,
                             city: str = "",
                             limit: int = 3,
                             page: int = 1,
@@ -680,6 +703,7 @@ class Marketplace(Storage):
                             type: str = "active") -> 'GigsResponse':
         storage: self = await self._storage(state)
         response = await UserAPI.get_user_gigs(telegram_id=telegram_id,
+                                               mode=mode,
                                                city=city,
                                                limit=limit,
                                                page=page,

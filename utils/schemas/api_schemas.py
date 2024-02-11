@@ -24,6 +24,12 @@ class UserGigs(BaseModel):
     archived: dict = {}
     pending: dict = {}
 
+class GigsCount(BaseModel):
+    active: int = 0
+    completed: int = 0
+    archived: int = 0
+    pending: int = 0
+
 class BaseUser(BaseModel):
     telegram_id: int = 0
     username: str = ""
@@ -60,8 +66,8 @@ class GigsResponse(BaseModel):
     pages: int = 0
     page: int = 0
     gigs: int = 0
-    next_page: int = 0
-    previous_page: int = 0
+    status: str = "active"
+    count: GigsCount = GigsCount()
 
 class GigsEnum(Enum):
     active: str = "active"

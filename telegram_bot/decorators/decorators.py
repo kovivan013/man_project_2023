@@ -35,9 +35,9 @@ def catch_error(func: Callable):
     """
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        try:
+        # try:
             return await func(*args, **kwargs)
-        except Exception as err:
+        # except Exception as err:
             from man_project_2023.telegram_bot.handlers.user_handlers import StartMH
             callback: CallbackQuery = args[1]
             state = kwargs["state"]

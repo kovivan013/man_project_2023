@@ -57,9 +57,9 @@ class UserAPI(API):
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod
-    async def get_user_gigs(cls, telegram_id: int, city: str = "", limit: int = 1,
+    async def get_user_gigs(cls, telegram_id: int, mode: int, city: str = "", limit: int = 1,
                             page: int = 1, from_date: str = "latest", type: str = "active") -> 'DataStructure':
-        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs{f'?city={city}&' if city else '?'}limit={limit}&page={page}&from_date={from_date}&type={type}")
+        endpoint: str = cls.__prefix(f"/{telegram_id}/gigs?mode={mode}&{f'city={city}&' if city else ''}limit={limit}&page={page}&from_date={from_date}&type={type}")
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod

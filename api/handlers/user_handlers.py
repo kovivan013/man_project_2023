@@ -140,20 +140,21 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
         if values := getattr(user, f"{type.value}"):
             for j, k in values.items():
                 gig = BaseGig().model_validate(k)
+                if gig.mode:
                 # if gig.mode: # парсить только то, что нашел детектив в своем моде (1)
                 #TODO: сделать при подключении модов в сервисе
-                name = gig.data.name.lower()
-                if name in title.lower() or title.lower() in name:
-                    all_gigs.append({
-                        j: k
-                    })
-                else:
-                    for i in gig.data.tags:
-                        if i.lower() in title.lower():
-                            all_gigs.append({
-                                j: k
-                            })
-                            break
+                    name = gig.data.name.lower()
+                    if name in title.lower() or title.lower() in name:
+                        all_gigs.append({
+                            j: k
+                        })
+                    else:
+                        for i in gig.data.tags:
+                            if i.lower() in title.lower():
+                                all_gigs.append({
+                                    j: k
+                                })
+                                break
 
     if city and city != "all":
         sorted_gigs: list = []
@@ -187,6 +188,7 @@ def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_dat
     document.gigs = len(all_gigs)
     document.pages = len(all_gigs) // limit + rest
     document.page = page
+    document.status = type.value
 
     result.data["response"] = document
 
@@ -233,6 +235,7 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
 
 @user_router.get("/{telegram_id}/gigs")
 def get_user_gigs(telegram_id: int,
+                  mode: int,
                   city: str = "",
                   limit: int = 1,
                   page: int = 1,
@@ -242,18 +245,24 @@ def get_user_gigs(telegram_id: int,
     result = DataStructure()
     document = GigsResponse()
     response: dict = {}
+    result.data["gigs"] = {}
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
 
     if user is None:
         return Reporter.api_exception(exceptions.ItemNotFoundException)
 
     gigs = BaseUser().gigs.model_validate(user.gigs)
+    count_data = document.count.model_dump()
     all_gigs: list = []
-    if values := getattr(gigs, f"{type.value}"):
-        for i, v in values.items():
-            all_gigs.append({
-                i: v
-            })
+    for i, v in gigs.model_dump().items():
+        for j, k in v.items():
+            if k["mode"] == mode:
+                count_data[i] += 1
+                if i == type.value:
+                    all_gigs.append({
+                        j: k
+                    })
+    document.count = count_data
 
     if city:
         sorted_gigs: list = []
@@ -271,14 +280,6 @@ def get_user_gigs(telegram_id: int,
                                     path=["data", "date"],
                                     reverse=from_date._value)
         response.clear()
-        result.data["gigs"] = {}
-
-        rest = 0
-        if len(sorted_gigs) % limit:
-            rest = 1
-
-        document.pages = len(sorted_gigs) // limit + rest
-        document.page = page
 
         result.data["response"] = document
         for i, v in enumerate(sorted_gigs.items()):
@@ -287,8 +288,16 @@ def get_user_gigs(telegram_id: int,
                 result.data["gigs"].update({
                     gig_id: data
                 })
-        # _data_for_update = all_gigs[start:end]
-        # result.data = sorted_gigs
+
+    rest = 0
+    if len(all_gigs) % limit:
+        rest = 1
+
+    document.gigs = len(all_gigs)
+    document.pages = len(all_gigs) // limit + rest
+    document.page = page
+    document.status = type.value
+    result.data["response"] = document
 
     result._status = status.HTTP_200_OK
 
@@ -343,6 +352,7 @@ def delete_gig(telegram_id: int,
         return Reporter.api_exception(exceptions.NoAccess)
 
     active_gigs.pop(gig_id)
+    gig.status = 3
     gigs.archived.update({
         gig_id: gig.model_dump()
     })
