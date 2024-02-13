@@ -16,7 +16,6 @@ class Reporter:
             result = DataStructure()
             result._status = exception.status_code
             result.message = exception.detail
-
             return JSONResponse(status_code=result.status,
                                 content=result.model_dump())
 
@@ -25,9 +24,9 @@ class Reporter:
             return await wrapper(exceptions.InvalidInputData)
 
     @staticmethod
-    def api_exception(exception: HTTPException):
+    def api_exception(exception: HTTPException, message: str = ""):
         result = DataStructure()
         result._status = exception.status_code
-        result.message = exception.detail
+        result.message = message or exception.detail
 
         return result

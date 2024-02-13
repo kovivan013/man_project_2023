@@ -13,7 +13,8 @@ from man_project_2023.telegram_bot.utils.utils import Utils
 from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
 from man_project_2023.telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
-    CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates, State
+    CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates,
+    GigPreviewStates, State
 )
 from man_project_2023.telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
@@ -39,8 +40,7 @@ class RegisterMH:
 
 
 class StartMH:
-    # current_state: CurrentState = CurrentState(keyboard_class=MainMenu,
-    #                                            state_class=MainMenuStates)
+
     @classmethod
     @history_manager(group=["add_gig", "change_mode"], onetime=True)
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
@@ -75,6 +75,7 @@ class StartMH:
         }
         await UserAPI.update_mode(telegram_id=state.user,
                                   data=data)
+        await callback.answer(text=f"Тепер Ви у режимі {MainMenu.modes[data['mode']]}")
         await history_manager.back(state=state,
                                    group="change_mode")
 
@@ -106,7 +107,7 @@ class MarketplaceMH:
                                        with_placeholder=False)
 
     @classmethod
-    @history_manager(group="add_gig", onetime=True)
+    @history_manager(group=["add_gig", "gig_preview"], onetime=True)
     async def request(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await MarketplaceStates.gigs_list.set()
         request = await marketplace._document(state)
@@ -123,8 +124,10 @@ class MarketplaceMH:
                                     reply_markup=GigContextMenu.marketplace_keyboard)
 
     @classmethod
+    @history_manager(group="gig_preview", onetime=True)
     async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await context_manager.delete_context_messages(state)
+        document = await marketplace._document(state)
         if callback.data == Controls.forward_callback:
             document = await marketplace.next_page(state)
         elif callback.data == Controls.backward_callback:
@@ -180,9 +183,7 @@ class MyProfileMH:
                                    image="dashboard_profile",
                                    with_placeholder=False)
         image = open('img/reg_data_board.png', 'rb')
-
         if not await context_manager.states_equals(state):
-
             await context_manager.appent_delete_list(
                 state=state,
                 message=await bot.send_photo(chat_id=state.chat,
@@ -199,7 +200,7 @@ class MyProfileMH:
             )
 
     @classmethod
-    @history_manager(group=["change_mode", "select_type"], onetime=True)
+    @history_manager(group=["change_mode", "select_type", "gig_preview"], onetime=True)
     async def my_gigs(cls, message: Message, state: FSMContext) -> None:
         await current_state.update_classes(state=state,
                                            keyboard_class=MyProfile,
@@ -232,8 +233,10 @@ class MyProfileMH:
                                         reply_markup=GigContextMenu.keyboard)
 
     @classmethod
+    @history_manager(group="gig_preview", onetime=True)
     async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await context_manager.delete_context_messages(state)
+        document = await marketplace._document(state)
         if callback.data == Controls.forward_callback:
             document = await marketplace.next_page(state)
         elif callback.data == Controls.backward_callback:
@@ -245,14 +248,15 @@ class MyProfileMH:
                                        DropdownMenu.placeholder_menu(
                                            mode=await UserAPI.get_mode(telegram_id=state.user),
                                            current_menu=await current_state.get_placeholder(
-                                               state=state
+                                               state=state,
+                                               required_state=ProfileStates.gigs
                                            )
                                        ),
                                        MyProfile.gigs_keyboard(gigs_type=document.status,
                                                                type_count=document.gigs,
                                                                page=document.page,
-                                                               pages=document.pages)]
-                                   )
+                                                               pages=document.pages)],
+                                   with_placeholder=False)
         await marketplace.get_user_gigs(state=state,
                                         telegram_id=state.user,
                                         mode=await UserAPI.get_mode(telegram_id=state.user),
@@ -261,9 +265,6 @@ class MyProfileMH:
                                         limit=2)
         await marketplace.send_gigs(state=state,
                                     reply_markup=GigContextMenu.keyboard)
-
-    @classmethod
-
 
     @classmethod
     @history_manager(group="edit_description", onetime=True)
@@ -818,10 +819,15 @@ def register_user_handlers(dp: Dispatcher) -> None:
         calendar_menu.move_bacward, Text(equals=Controls.backward_callback), state=CreateGigStates.date
     )
     dp.register_callback_query_handler(
-        marketplace.keyboard_control, Text(endswith=GigContextMenu.placeholder_callback),
-        state=[ProfileStates.gigs, MarketplaceStates.gigs_list]
+        marketplace.confirm_delete, Text(endswith=[GigContextMenu.stop_callback, YesOrNo.no_callback]), state=ProfileStates.gigs
     )
     dp.register_callback_query_handler(
-        marketplace.keyboard_control, Text(equals=GigContextMenu.back_callback),
-        state=[ProfileStates.gigs, MarketplaceStates.gigs_list]
+        marketplace.delete_gig, Text(endswith=GigContextMenu.confirm_delete_callback), state=ProfileStates.gigs
+    )
+    dp.register_callback_query_handler(
+        marketplace.gig_preview, Text(endswith=[GigContextMenu.preview_callback, GigContextMenu.detail_callback]), state=[ProfileStates.gigs,
+                                                                                                                          MarketplaceStates.gigs_list]
+    )
+    dp.register_callback_query_handler(
+        marketplace.back_to_menu, Text(equals=Controls.backward_callback), state=GigPreviewStates.preview
     )

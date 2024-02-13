@@ -110,7 +110,7 @@ class HistoryManager(Storage):
                 if not onetime and last_index > 1:
                     storage.history[group]["history"].pop(last_index)
             except Exception as err:
-                print(f"ERROR in {self.back}: ", err)
+                print(f"ERROR in {self.back}: {err}\nOriginal function: {func.__name__}\n{func}")
             await self._save(state, storage)
         return None
 

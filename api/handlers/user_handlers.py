@@ -339,17 +339,20 @@ def delete_gig(telegram_id: int,
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
 
     if user is None:
-        return Reporter.api_exception(exceptions.ItemNotFoundException)
+        return Reporter.api_exception(exception=exceptions.ItemNotFoundException,
+                                      message="❌ Виникла несподівана помилка!\nСпробуйте знову.")
 
     gigs = BaseUser().gigs.model_validate(user.gigs)
     active_gigs = gigs.active
 
     if gig_id not in active_gigs:
-        return Reporter.api_exception(exceptions.ItemNotFoundException)
+        return Reporter.api_exception(exception=exceptions.ItemNotFoundException,
+                                      message="❌ Неможливо видалити це оголошення!")
 
     gig = BaseGig().model_validate(active_gigs[gig_id])
     if gig.telegram_id != telegram_id:
-        return Reporter.api_exception(exceptions.NoAccess)
+        return Reporter.api_exception(exception=exceptions.NoAccess,
+                                      message="❌ У вас немає дозволу на видалення цього оголошення!")
 
     active_gigs.pop(gig_id)
     gig.status = 3
@@ -361,6 +364,7 @@ def delete_gig(telegram_id: int,
     db.commit()
 
     result.data = gig.model_dump()
+    result.message = "✅ Успішно!"
     result._status = status.HTTP_200_OK
 
     db.close()

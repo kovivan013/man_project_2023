@@ -14,7 +14,7 @@ from man_project_2023.telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile, InlineKeyboardMarkup,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
 )
-from man_project_2023.telegram_bot.states.states import FiltersStates
+from man_project_2023.telegram_bot.states.states import FiltersStates, GigPreviewStates, ProfileStates
 from man_project_2023.telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
 from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser, GigsResponse
@@ -136,6 +136,7 @@ class CurrentState(Storage):
         buttons = vars(await self.get_class(state))
         name = await self.get_name(state)
         callback: str = "placeholder_callback"
+        print(buttons)
 
         placeholder: list = {"text": f"✅ {buttons[name] if required_state is None else buttons[required_state._state]} ▼",
                             "callback_data": callback}
@@ -400,9 +401,6 @@ class ContextManager(Storage):
             for i in instance:
                 for v in i.inline_keyboard:
                     keyboard.inline_keyboard.append(v)
-
-
-
 
         try:
             media_id = utils.file_id(storage.message)
@@ -676,7 +674,7 @@ class Marketplace(Storage):
         return storage.document
 
     @staticmethod
-    def date(timestamp: int):
+    def date(timestamp: int, full_date: bool = False):
         now = utils.now(timestamp=False)
         date = datetime.datetime.fromtimestamp(timestamp)
         today = all([date.year == now.year,
@@ -691,7 +689,7 @@ class Marketplace(Storage):
         elif yesterday:
             time = f"Учора, о {timing}"
         else:
-            time = f"{date.day if date.day > 9 else f'0{date.day}'}.{date.month if date.month > 9 else f'0{date.month}'}.{date.year}"
+            time = f"{date.day if date.day > 9 else f'0{date.day}'}.{date.month if date.month > 9 else f'0{date.month}'}.{date.year}{f', о {timing}' if full_date else ''}"
 
         return time
 
@@ -771,28 +769,6 @@ class Marketplace(Storage):
         return None
 
     async def send_gigs(self, state: FSMContext, reply_markup: Callable):
-        # cls, state: FSMContext, request: str = "",
-        # telegram_id: int = 0, city: str = "", limit: int = 5, page: int = 1,
-        # from_date: str = "latest", type: str = "active", from_saved: bool = False
-        # if request:
-        #     gigs = await cls.get_gigs(request=request,
-        #                               city=city,
-        #                               limit=limit,
-        #                               page=page,
-        #                               from_date=from_date,
-        #                               type=type)
-        # elif telegram_id:
-        #     gigs = await cls.get_user_gigs(telegram_id=telegram_id,
-        #                                    city=city,
-        #                                    limit=limit,
-        #                                    page=page,
-        #                                    from_date=from_date,
-        #                                    type=type)
-        # else:
-        #     if from_saved:
-        #         gigs = cls.on_page_gigs
-        #     else:
-        #         cls.on_page_gigs = gigs
         storage: self = await self._storage(state)
         for gig in storage.gigs:
             print(gig.telegram_id)
@@ -808,16 +784,16 @@ class Marketplace(Storage):
                                              disable_notification=True)
             )
 
-    async def keyboard_control(self, callback: CallbackQuery, state: FSMContext):
+    async def confirm_delete(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state)
-        if callback.data == GigContextMenu.back_callback:
+        if callback.data == GigContextMenu.no_callback:
             await callback.message.edit_reply_markup(
                 reply_markup=GigContextMenu.keyboard()
             )
             storage.open_id = 0
 
-        if callback.data.endswith(GigContextMenu.placeholder_callback):
-            value: str = callback.data[:callback.data.rindex(GigContextMenu.placeholder_callback)]
+        if callback.data.endswith(GigContextMenu.stop_callback):
+            value: str = callback.data[:callback.data.rindex(GigContextMenu.stop_callback)]
             if storage.open_id:
                 try:
                     await bot.edit_message_reply_markup(
@@ -830,15 +806,82 @@ class Marketplace(Storage):
 
             telegram_id, gig_id = tuple(value.split("_"))
             await callback.message.edit_reply_markup(
-                reply_markup=GigContextMenu.keyboard(open=True,
-                                                     telegram_id=telegram_id,
-                                                     gig_id=gig_id)
+                reply_markup=GigContextMenu.confirm_delete(telegram_id=telegram_id,
+                                                           gig_id=gig_id)
             )
             storage.open_id = callback.message.message_id
 
         await self._save(state, storage)
 
+    async def gig_preview(self, callback: CallbackQuery, state: FSMContext):
+        await context_manager.delete_context_messages(state)
+        await GigPreviewStates.preview.set()
+        telegram_id, gig_id = tuple(callback.data.split("_")[:2])
+        response = await UserAPI.get_gig(telegram_id=telegram_id,
+                                         gig_id=gig_id)
+        data = BaseGig().model_validate(response.data)
+        n = "\n"
+        message_id = (await context_manager._storage(state)).message.message_id
+        modes: dict = {
+            0: {
+                0: "Загублено",
+                1: "Знайдено"
+            },
+            1: {
+                0: "загублену",
+                1: "знайдену"
+            }
+        }
+        callback_data: dict = {
+            GigContextMenu.detail_callback: True,
+        }
+        print(callback.data)
+        caption = f"{modes[0][data.mode]} *{data.data.name.lower()}*\n\n" \
+                  f"" \
+                  f"{data.data.description}\n\n" \
+                  f"" \
+                  f"Інформація про {modes[1][data.mode]} річ:\n" \
+                  f"📅 {self.date(timestamp=data.data.date, full_date=True)}\n" \
+                  f"🗺 {data.data.location.data.type} {data.data.location.data.name}\n" \
+                  f"" \
+                  f"{f'{n}#' + ' #'.join(data.data.tags) + f'{n}{n}' if data.data.tags else n}" \
+                  f"" \
+                  f"🌟 *Ваша річ? Просто натисніть на кнопку під повідомленням!*"
+        print("_".join(callback.data.split("_")[-2:]))
+        await bot.edit_message_media(
+            media=InputMediaPhoto(
+                media=InputFile(
+                    PhotosDB.get(telegram_id=telegram_id,
+                                 gig_id=gig_id)
+                ),
+                caption=caption,
+                parse_mode="Markdown"
+            ),
+            chat_id=state.chat,
+            message_id=message_id,
+            reply_markup=GigContextMenu.contact_keyboard(
+                with_contact=callback_data.get(
+                    "_".join(callback.data.split("_")[-2:]), False
+                )
+            )
+        )
 
+    async def delete_gig(self, callback: CallbackQuery, state: FSMContext):
+        telegram_id, gig_id = tuple(callback.data.split("_")[:2])
+        response = await UserAPI.delete_gig(telegram_id=telegram_id,
+                                            gig_id=gig_id)
+        await callback.answer(text=response.message,
+                              show_alert=True)
+        if response._success:
+            from man_project_2023.telegram_bot.handlers.user_handlers import MyProfileMH
+            await MyProfileMH.my_gigs(message=callback.message,
+                                      state=state)
+
+    async def back_to_menu(self, callback: CallbackQuery, state: FSMContext):
+        from man_project_2023.telegram_bot.decorators.decorators import history_manager
+        await ProfileStates.gigs.set()
+        await history_manager.back(state=state,
+                                   group="gig_preview")
 
 marketplace = Marketplace()
 

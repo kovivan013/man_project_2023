@@ -43,3 +43,8 @@ class FiltersStates(StatesGroup):
     location_filter = State()
     tags_filter =State()
 
+class GigPreviewStates(StatesGroup):
+    preview = State()
+    secret_word = State()
+    contacts = State()
+
