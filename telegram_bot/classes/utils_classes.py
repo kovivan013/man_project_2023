@@ -136,7 +136,6 @@ class CurrentState(Storage):
         buttons = vars(await self.get_class(state))
         name = await self.get_name(state)
         callback: str = "placeholder_callback"
-        print(buttons)
 
         placeholder: list = {"text": f"✅ {buttons[name] if required_state is None else buttons[required_state._state]} ▼",
                             "callback_data": callback}
@@ -388,19 +387,19 @@ class ContextManager(Storage):
 
         keyboard = reply_markup
 
-        if with_placeholder:
-            keyboard = DropdownMenu.placeholder_menu(
-                current_menu=await storage.current_state.get_placeholder(
-                    state=state
+        if reply_markup:
+            if with_placeholder:
+                keyboard = DropdownMenu.placeholder_menu(
+                    reply_markup=reply_markup,
+                    mode=await UserAPI.get_mode(telegram_id=state.user)
                 )
-            )
-        if reply_markup is not None:
-            keyboard = InlineKeyboardMarkup()
-            if not isinstance(instance := reply_markup, list):
-                instance = [reply_markup]
-            for i in instance:
-                for v in i.inline_keyboard:
-                    keyboard.inline_keyboard.append(v)
+            else:
+                keyboard = InlineKeyboardMarkup()
+                if not isinstance(instance := reply_markup, list):
+                    instance = [reply_markup]
+                for i in instance:
+                    for v in i.inline_keyboard:
+                        keyboard.inline_keyboard.append(v)
 
         try:
             media_id = utils.file_id(storage.message)

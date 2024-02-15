@@ -147,10 +147,10 @@ class MarketplaceMH:
 
 class MyProfileMH:
 
-    @classmethod
-    async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await context_manager.select(state)
-        await ProfileStates.select_menu.set()
+    # @classmethod
+    # async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+    #     await context_manager.select(state)
+    #     await ProfileStates.select_menu.set()
 
     @classmethod
     @catch_error
@@ -163,25 +163,11 @@ class MyProfileMH:
         await ProfileStates.info_about.set()
         response = await UserAPI.get_user(telegram_id=state.user)
         user: BaseUser = BaseUser().model_validate(response.data)
-        reply_markup = DropdownMenu.placeholder_menu(
-            mode=user.mode,
-            current_menu=await current_state.get_placeholder(
-                state=state
-            )
-        )
+
         await context_manager.edit(state=state,
                                    current_state=current_state,
-                                   reply_markup=[
-                                       DropdownMenu.placeholder_menu(
-                                           mode=user.mode,
-                                           current_menu=await current_state.get_placeholder(
-                                               state=state
-                                           )
-                                       ),
-                                       MainMenu.add_gig_keyboard()
-                                   ],
-                                   image="dashboard_profile",
-                                   with_placeholder=False)
+                                   reply_markup=MyProfile.info_about_placeholder(),
+                                   image="dashboard_profile")
         image = open('img/reg_data_board.png', 'rb')
         if not await context_manager.states_equals(state):
             await context_manager.appent_delete_list(
@@ -216,18 +202,9 @@ class MyProfileMH:
         await context_manager.edit(state=state,
                                    current_state=current_state,
                                    image="your_gigs",
-                                   reply_markup=[
-                                       DropdownMenu.placeholder_menu(
-                                           mode=await UserAPI.get_mode(telegram_id=state.user),
-                                           current_menu=await current_state.get_placeholder(
-                                               state=state
-                                           )
-                                       ),
-                                       MyProfile.gigs_keyboard(gigs_type=document.status,
-                                                               type_count=document.gigs,
-                                                               page=document.page,
-                                                               pages=document.pages)]
-                                   )
+                                   reply_markup=MyProfile.gigs_placeholder(
+                                       document=document
+                                   ))
         if not await context_manager.states_equals(state):
             await marketplace.send_gigs(state=state,
                                         reply_markup=GigContextMenu.keyboard)
@@ -244,19 +221,9 @@ class MyProfileMH:
         await context_manager.edit(state=state,
                                    current_state=current_state,
                                    image="your_gigs",
-                                   reply_markup=[
-                                       DropdownMenu.placeholder_menu(
-                                           mode=await UserAPI.get_mode(telegram_id=state.user),
-                                           current_menu=await current_state.get_placeholder(
-                                               state=state,
-                                               required_state=ProfileStates.gigs
-                                           )
-                                       ),
-                                       MyProfile.gigs_keyboard(gigs_type=document.status,
-                                                               type_count=document.gigs,
-                                                               page=document.page,
-                                                               pages=document.pages)],
-                                   with_placeholder=False)
+                                   reply_markup=MyProfile.gigs_placeholder(
+                                       document=document
+                                   ))
         await marketplace.get_user_gigs(state=state,
                                         telegram_id=state.user,
                                         mode=await UserAPI.get_mode(telegram_id=state.user),
@@ -643,10 +610,10 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
 
     dp.register_callback_query_handler(
-        MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.info_about
+        MyProfileMH.my_gigs, Text(equals=MyProfile.gigs_callback), state=ProfileStates.info_about
     )
     dp.register_callback_query_handler(
-        MyProfileMH.select_menu, Text(equals="placeholder_callback"), state=ProfileStates.gigs
+        MyProfileMH.info_about, Text(equals=MyProfile.info_about_callback), state=ProfileStates.gigs
     )
     dp.register_callback_query_handler(
         MyProfileMH.info_about, Text(equals=MainMenu.profile_callback), state=MainMenuStates.start_menu

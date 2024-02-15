@@ -1,6 +1,7 @@
 from aiogram.types import (
     KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 )
+from man_project_2023.utils.schemas.api_schemas import GigsResponse
 from typing import Union
 from dataclasses import dataclass
 import datetime
@@ -421,7 +422,7 @@ class DropdownMenu(MainMenu):
     callback_data: str = f"none"
 
     @classmethod
-    def placeholder_menu(cls, current_menu: dict, mode: int = 0):
+    def placeholder_menu(cls, reply_markup: InlineKeyboardMarkup, mode: int = 0):
         keyboard = default_inline_keyboard()
         modes: dict = {
             0: "🔦",
@@ -433,8 +434,10 @@ class DropdownMenu(MainMenu):
                                  callback_data="back_to_main"),
             InlineKeyboardButton(text=f"Режим {modes[mode]}",
                                  callback_data=cls.change_mode_callback),
-            InlineKeyboardButton(**current_menu)
         )
+
+        for i in reply_markup.inline_keyboard:
+            keyboard.inline_keyboard.append(i)
 
         return keyboard
 
@@ -453,12 +456,11 @@ class DropdownMenu(MainMenu):
 
 class MyProfile(MainMenu, Controls):
 
-    def __init__(self):
-        self.info_about: str = f"Про себе 🔓"
-        self.gigs: str = f"Мої оголошення 📰"
+    info_about: str = f"🔓 Про себе ▶"
+    gigs: str = f"📰 Мої оголошення ▶"
 
-        self.info_about_callback: str = f"info_about_callback"
-        self.gigs_callback: str = f"gigs_callback"
+    info_about_callback: str = f"info_about_callback"
+    gigs_callback: str = f"gigs_callback"
 
     update: str = f"🖊 Змінити"
     share: str = f"🔗 Поділитися"
@@ -466,6 +468,19 @@ class MyProfile(MainMenu, Controls):
     update_callback: str = f"update_callback"
     share_callback: str = f"share_callback"
     change_type_callback = "change_type_callback"
+
+    @classmethod
+    def info_about_placeholder(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard(row_width=1)
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.gigs,
+                                 callback_data=cls.gigs_callback),
+            InlineKeyboardButton(text=cls.add_gig,
+                                 callback_data=cls.add_gig_callback)
+        )
+
+        return keyboard
 
     @classmethod
     def info_about_keyboard(cls) -> Union[InlineKeyboardMarkup]:
@@ -479,17 +494,31 @@ class MyProfile(MainMenu, Controls):
         )
 
         return keyboard
-
+    # @classmethod
+    # def gigs_keyboard(cls, gigs_type: Union[str, int], type_count: int, page: int, pages: int) -> Union[
+    #     InlineKeyboardMarkup]:
+    #     keyboard = default_inline_keyboard(row_width=1)
+    #
+    #     keyboard.add(
+    #         InlineKeyboardButton(text=f"{Filters.types[gigs_type](type_count)} ▼",
+    #                              callback_data=cls.change_type_callback)
+    #     )
+    #     keyboard.row(*cls.pages_keyboard(page=page,
+    #                                      pages=pages))
+    #
+    #     return keyboard
     @classmethod
-    def gigs_keyboard(cls, gigs_type: Union[str, int], type_count: int, page: int, pages: int) -> Union[InlineKeyboardMarkup]:
+    def gigs_placeholder(cls, document: GigsResponse) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
 
         keyboard.add(
-            InlineKeyboardButton(text=f"{Filters.types[gigs_type](type_count)} ▼",
+            InlineKeyboardButton(text=cls.info_about,
+                                 callback_data=cls.info_about_callback),
+            InlineKeyboardButton(text=f"{Filters.types[document.status](document.gigs)} ▼",
                                  callback_data=cls.change_type_callback)
         )
-        keyboard.row(*cls.pages_keyboard(page=page,
-                                         pages=pages))
+        keyboard.row(*cls.pages_keyboard(page=document.page,
+                                         pages=document.pages))
 
         return keyboard
 
