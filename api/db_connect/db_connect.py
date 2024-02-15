@@ -1,4 +1,4 @@
-from man_project_2023.api.config import db
+from api.config import db
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

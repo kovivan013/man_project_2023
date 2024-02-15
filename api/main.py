@@ -1,7 +1,8 @@
 import uvicorn
 from fastapi import FastAPI
 
-from man_project_2023.utils.debug.errors_reporter import Reporter
+from utils.debug.errors_reporter import Reporter
+
 
 from routers import api_router
 from config import settings

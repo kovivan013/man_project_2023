@@ -1,11 +1,11 @@
 import asyncio
 import requests
 
-from man_project_2023.telegram_bot.config import BASE_API_URL
-from man_project_2023.telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DeleteRequest
-from man_project_2023.utils.schemas.schemas import DataStructure
-from man_project_2023.utils.schemas.api_schemas import GigCreate, UserCreate, BaseUser, BaseGig
-from man_project_2023.telegram_bot.api.utils_schemas import LocationStructure
+from telegram_bot.config import BASE_API_URL
+from telegram_bot.api.request_classes import GetRequest, PostRequest, PatchRequest, DeleteRequest
+from utils.schemas.schemas import DataStructure
+from utils.schemas.api_schemas import GigCreate, UserCreate, BaseUser, BaseGig
+from telegram_bot.api.utils_schemas import LocationStructure
 
 
 class API:

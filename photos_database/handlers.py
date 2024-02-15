@@ -1,7 +1,7 @@
 import os
 import shutil
 from aiogram.types import Message
-from man_project_2023.telegram_bot.config import Bot, bot
+from telegram_bot.config import Bot, bot
 
 BASE_DIR = "database"
 

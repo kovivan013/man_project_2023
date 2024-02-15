@@ -4,23 +4,23 @@ from pydantic import BaseModel
 
 from typing import List, Union, Callable
 
-from man_project_2023.telegram_bot.config import dp, Dispatcher
+from telegram_bot.config import dp, Dispatcher
 
 from aiogram.types import CallbackQuery, Message
 from aiogram.types import InputMediaPhoto, InputFile
-from man_project_2023.telegram_bot.config import bot
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI, AdminAPI, LocationAPI
-from man_project_2023.telegram_bot.keyboards.keyboards import (
+from telegram_bot.config import bot
+from telegram_bot.classes.api_requests import UserAPI, AdminAPI, LocationAPI
+from telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile, InlineKeyboardMarkup,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
 )
-from man_project_2023.telegram_bot.states.states import FiltersStates, GigPreviewStates, ProfileStates
-from man_project_2023.telegram_bot.utils.utils import Utils
+from telegram_bot.states.states import FiltersStates, GigPreviewStates, ProfileStates
+from telegram_bot.utils.utils import Utils
 from aiogram.dispatcher.filters.state import State
-from man_project_2023.utils.schemas.api_schemas import BaseGig, BaseUser, GigsResponse
-from man_project_2023.utils.schemas.schemas import GigMessage
-from man_project_2023.photos_database.handlers import PhotosDB
-from man_project_2023.telegram_bot.api.utils_schemas import StateStructure, LocationStructure
+from utils.schemas.api_schemas import BaseGig, BaseUser, GigsResponse
+from utils.schemas.schemas import GigMessage
+from photos_database.handlers import PhotosDB
+from telegram_bot.api.utils_schemas import StateStructure, LocationStructure
 from aiogram.dispatcher.storage import FSMContext
 
 utils = Utils()

@@ -8,27 +8,27 @@ from aiogram.dispatcher.storage import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import InputMediaPhoto, InputFile
 
-from man_project_2023.telegram_bot.config import bot, Dispatcher, dp
-from man_project_2023.telegram_bot.utils.utils import Utils
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
-from man_project_2023.telegram_bot.states.states import (
+from telegram_bot.config import bot, Dispatcher, dp
+from telegram_bot.utils.utils import Utils
+from telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
+from telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
     CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates,
     GigPreviewStates, State
 )
-from man_project_2023.telegram_bot.classes.utils_classes import (
+from telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
     filters_manager, marketplace, Marketplace, Storage
 )
-from man_project_2023.telegram_bot.keyboards.keyboards import (
+from telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu
 )
-from man_project_2023.telegram_bot.decorators.decorators import (
+from telegram_bot.decorators.decorators import (
     catch_error, history_manager
 )
-from man_project_2023.photos_database.handlers import PhotosDB
-from man_project_2023.utils.schemas.api_schemas import (
+from photos_database.handlers import PhotosDB
+from utils.schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode
 )
 

@@ -4,10 +4,10 @@ from typing import Any, Callable, Union
 from aiogram.types import Message, CallbackQuery
 
 from pydantic import BaseModel, ValidationError
-from man_project_2023.utils.debug import exceptions
+from utils.debug import exceptions
 
-from man_project_2023.telegram_bot.classes.api_requests import UserAPI
-from man_project_2023.telegram_bot.classes.utils_classes import Storage, FSMContext
+from telegram_bot.classes.api_requests import UserAPI
+from telegram_bot.classes.utils_classes import Storage, FSMContext
 
 def check_super_admin(func: Callable):
     """

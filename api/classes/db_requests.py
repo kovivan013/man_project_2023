@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from sqlalchemy.orm import Session
 
-from man_project_2023.api.models.models import User
-from man_project_2023.api.handlers.user_handlers import Response
-from man_project_2023.utils.schemas.schemas import DataStructure
+from api.models.models import User
+from api.handlers.user_handlers import Response
+from utils.schemas.schemas import DataStructure
 
 class RequestSender(ABC):
 

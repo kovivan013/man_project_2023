@@ -1,7 +1,7 @@
 from aiogram.types import (
     KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup
 )
-from man_project_2023.utils.schemas.api_schemas import GigsResponse
+from utils.schemas.api_schemas import GigsResponse
 from typing import Union
 from dataclasses import dataclass
 import datetime

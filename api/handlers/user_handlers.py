@@ -5,17 +5,17 @@ from fastapi import APIRouter, Depends, Response, Request, Query
 from starlette import status
 from sqlalchemy.orm import Session
 
-from man_project_2023.photos_database.handlers import PhotosDB
+from photos_database.handlers import PhotosDB
 
-from man_project_2023.api.db_connect.db_connect import get_db
-from man_project_2023.api.models.models import User
-from man_project_2023.api.classes.db_requests import PostRequest
-from man_project_2023.utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode
-from man_project_2023.utils.debug import exceptions
-from man_project_2023.utils.debug.errors_reporter import Reporter
-from man_project_2023.api.utils.utils import Utils
+from api.db_connect.db_connect import get_db
+from api.models.models import User
+from api.classes.db_requests import PostRequest
+from utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode
+from utils.debug import exceptions
+from utils.debug.errors_reporter import Reporter
+from api.utils.utils import Utils
 
-from man_project_2023.utils.schemas.schemas import DataStructure
+from utils.schemas.schemas import DataStructure
 
 user_router = APIRouter()
 

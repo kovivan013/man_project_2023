@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from man_project_2023.api.db_connect.db_connect import get_db
-from man_project_2023.api.models.models import User
-from man_project_2023.utils.schemas.api_schemas import UserCreate
-from man_project_2023.utils.debug import exceptions
+from api.db_connect.db_connect import get_db
+from api.models.models import User
+from utils.schemas.api_schemas import UserCreate
+from utils.debug import exceptions
 
 admin_router = APIRouter()

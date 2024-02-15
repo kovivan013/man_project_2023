@@ -1,8 +1,7 @@
 from pydantic import BaseModel
 from typing import List, Dict, Union
 from enum import Enum
-
-from man_project_2023.api.utils.utils import Utils
+from api.utils.utils import Utils
 
 
 class Description(BaseModel):
