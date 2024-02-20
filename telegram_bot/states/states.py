@@ -2,6 +2,14 @@ from aiogram.dispatcher.filters.state import State, StatesGroup
 from aiogram.dispatcher.storage import FSMContext
 from aiogram.types import Message
 
+class RegisterStates(StatesGroup):
+    start_register = State()
+    username = State()
+    description = State()
+    photo = State()
+    phone_number = State()
+    creating_account = State()
+
 class MainMenuStates(StatesGroup):
     start_menu = State()
 

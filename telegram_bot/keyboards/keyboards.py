@@ -407,6 +407,108 @@ class MainMenu:
         return keyboard
 
 
+class RegisterMenu(MainMenu, YesOrNo):
+    
+    start: str = f"🌟 Почати!"
+    start_register: str = f"🌟 Почати реєстрацію!"
+    from_profile: str = f"👤 Взяти з Telegram"
+    send_number: str = f"📞 Відправити номер телефону"
+    dont_share: str = f"❌ Не хочу ділитися!"
+
+    start_callback: str = f"start_callback"
+    from_profile_callback: str = f"from_profile_callback"
+
+    @classmethod
+    def keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.info_about,
+                                 callback_data=cls.info_about_callback),
+            InlineKeyboardButton(text=cls.start,
+                                 callback_data=cls.start_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def start_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.start_register,
+                                 callback_data=cls.start_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def username_keyboard(cls, with_next: bool = False) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        if with_next:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.next,
+                                     callback_data=cls.next_callback)
+            )
+            return keyboard
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.from_profile,
+                                 callback_data=cls.from_profile_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def description_keyboard(cls, with_next: bool = False) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        if with_next:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.next,
+                                     callback_data=cls.next_callback)
+            )
+            return keyboard
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.skip,
+                                 callback_data=cls.skip_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def photo_keyboard(cls, with_next: bool = False) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        if with_next:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.next,
+                                     callback_data=cls.next_callback)
+            )
+            return keyboard
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.from_profile,
+                                 callback_data=cls.from_profile_callback)
+        )
+
+        return keyboard
+
+    @classmethod
+    def phone_keyboard(cls) -> Union[ReplyKeyboardMarkup]:
+        keyboard = default_reply_keyboard()
+
+        keyboard.add(
+            KeyboardButton(text=cls.dont_share),
+            KeyboardButton(text=cls.send_number,
+                           request_contact=True)
+        )
+
+        return keyboard
+
+
 class DropdownMenu(MainMenu):
     # будет 3 вида вида выпадающих меню для фильтров (active option с галочкой)
     #

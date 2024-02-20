@@ -39,7 +39,7 @@ class PhotosDB:
         shutil.rmtree(gig)
 
     @classmethod
-    async def save(cls, telegram_id: int, file_id: str, gig_id: str):
+    async def save_preview(cls, telegram_id: int, file_id: str, gig_id: str):
         photo_path = await bot.get_file(file_id=file_id)
         user = cls.join(cls.__BASE_DIR, telegram_id)
         gigs = cls.join(user, "gigs")
@@ -53,14 +53,25 @@ class PhotosDB:
                                      save_path)
 
     @classmethod
+    async def save_avatar(cls, telegram_id: int, file_id: str):
+        photo_path = await bot.get_file(file_id=file_id)
+        user = cls.join(cls.__BASE_DIR, telegram_id)
+        profile = cls.join(user, "profile")
+
+        save_path = cls.join(profile, "avatar.jpg", absolute_path=True)
+        await bot.download_file(photo_path.file_path,
+                                save_path)
+
+    @classmethod
     def get(cls, telegram_id: int, gig_id: str):
         user = cls.join(cls.__BASE_DIR, telegram_id, absolute_path=True)
         gigs = cls.join(user, "gigs")
-
         gig = cls.join(gigs, gig_id)
-        print(gig)
-        return open(f"{gig}\preview.jpg", "rb")
 
+        try:
+            return open(f"{gig}\preview.jpg", "rb")
+        except:
+            return None
 
 # import asyncio
 #

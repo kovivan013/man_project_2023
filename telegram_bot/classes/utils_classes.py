@@ -305,11 +305,11 @@ class ContextManager(Storage):
         """
         storage: self = await self._storage(state)
         storage.current_state = current_state
-        photo = await storage.current_state.state_photo(image=image)
+        photo = await current_state.state_photo(image=image)
         storage.message = await bot.send_photo(chat_id=state.chat,
                                                photo=photo,
                                                reply_markup=DropdownMenu.placeholder_menu(
-                                                   current_menu=await storage.current_state.get_placeholder(
+                                                   current_menu=await current_state.get_placeholder(
                                                        state=state,
                                                        required_state=required_state
                                                    )
@@ -317,7 +317,7 @@ class ContextManager(Storage):
         await self._save(state, storage)
         return storage.message
 
-    async def send_default(self, state: FSMContext, current_state: CurrentState, text: str,
+    async def send_default(self, state: FSMContext, text: str,
                            image: str = "", reply_markup = None):
         """
         Отравляет сообщение без клавиатуры с плейсхолдером (подменю в котором сейчас находится пользователь)
@@ -331,7 +331,7 @@ class ContextManager(Storage):
         storage.current_state = current_state
         chat_id: int = state.chat
         if image:
-            photo = await storage.current_state.state_photo(image=image)
+            photo = await current_state.state_photo(image=image)
             storage.message = await bot.send_photo(chat_id=chat_id,
                                                    caption=text,
                                                    photo=photo,
@@ -366,14 +366,14 @@ class ContextManager(Storage):
             parse_mode="Markdown"
         ),
             reply_markup=DropdownMenu.menu_keyboard(
-                buttons=await storage.current_state.get_buttons(
+                buttons=await current_state.get_buttons(
                     state=state,
                     reply_markup=reply_markup
                 )
         ))
         await self._save(state, storage)
 
-    async def edit(self, state: FSMContext, current_state: CurrentState = None,
+    async def edit(self, state: FSMContext,
                    text: str = None, image: str = None, file_id: str = None,
                    reply_markup: InlineKeyboardMarkup = None, with_placeholder: bool = True):
 
@@ -381,9 +381,6 @@ class ContextManager(Storage):
             await self.delete_context_messages(state)
 
         storage: self = await self._storage(state)
-        if current_state is not None:
-            storage.current_state = current_state
-        edited_message: Message = None
 
         keyboard = reply_markup
 
@@ -401,23 +398,23 @@ class ContextManager(Storage):
                     for v in i.inline_keyboard:
                         keyboard.inline_keyboard.append(v)
 
-        try:
-            media_id = utils.file_id(storage.message)
-            media = await storage.current_state.state_photo(image=image) if not file_id and image \
-                else file_id if file_id \
-                else media_id
+        # try:
+        media_id = utils.file_id(storage.message)
+        media = await current_state.state_photo(image=image) if not file_id and image \
+            else file_id if file_id \
+            else media_id
 
-            if storage.message: print(storage.message.message_id, "edit")
-            edited_message = await storage.message.edit_media(media=InputMediaPhoto(
-                media=media,
-                caption=text,
-                parse_mode="Markdown"
-            ),
-                reply_markup=keyboard)
-            storage.message = edited_message
-        except Exception as err:
-            print(err)
-            return None
+        if storage.message: print(storage.message.message_id, "edit")
+        edited_message = await storage.message.edit_media(media=InputMediaPhoto(
+            media=media,
+            caption=text,
+            parse_mode="Markdown"
+        ),
+            reply_markup=keyboard)
+        storage.message = edited_message
+        # except Exception as err:
+        #     print(err)
+        #     return None
         await self._save(state, storage)
         return edited_message
 
@@ -444,7 +441,7 @@ class ContextManager(Storage):
 
     async def states_equals(self, state: FSMContext) -> bool:
         storage: self = await self._storage(state)
-        return storage.previous_state == await storage.current_state.get_name(state)
+        return storage.previous_state == await current_state.get_name(state)
 
 
     async def delete(self, state: FSMContext):
@@ -616,7 +613,7 @@ class FiltersManager(Storage):
         )
 
     async def set_type(self, callback: CallbackQuery, state: FSMContext):
-        from man_project_2023.telegram_bot.decorators.decorators import history_manager
+        from telegram_bot.decorators.decorators import history_manager
         storage: self = await self._storage(state)
         document = await marketplace._document(state)
         storage.gigs_type = callback.data.split("_")[0]
@@ -770,18 +767,19 @@ class Marketplace(Storage):
     async def send_gigs(self, state: FSMContext, reply_markup: Callable):
         storage: self = await self._storage(state)
         for gig in storage.gigs:
-            print(gig.telegram_id)
-            await context_manager.appent_delete_list(
-                state=state,
-                message=await bot.send_photo(chat_id=state.user,
-                                             photo=InputFile(PhotosDB.get(telegram_id=gig.telegram_id,
-                                                                          gig_id=gig.id)),
-                                             caption=gig.text,
-                                             reply_markup=reply_markup(telegram_id=gig.telegram_id,
-                                                                       gig_id=gig.id),
-                                             parse_mode="Markdown",
-                                             disable_notification=True)
-            )
+            media = PhotosDB.get(telegram_id=gig.telegram_id,
+                                 gig_id=gig.id)
+            if media is not None:
+                await context_manager.appent_delete_list(
+                    state=state,
+                    message=await bot.send_photo(chat_id=state.user,
+                                                 photo=InputFile(media),
+                                                 caption=gig.text,
+                                                 reply_markup=reply_markup(telegram_id=gig.telegram_id,
+                                                                           gig_id=gig.id),
+                                                 parse_mode="Markdown",
+                                                 disable_notification=True)
+                )
 
     async def confirm_delete(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state)
@@ -872,12 +870,12 @@ class Marketplace(Storage):
         await callback.answer(text=response.message,
                               show_alert=True)
         if response._success:
-            from man_project_2023.telegram_bot.handlers.user_handlers import MyProfileMH
+            from telegram_bot.handlers.user_handlers import MyProfileMH
             await MyProfileMH.my_gigs(message=callback.message,
                                       state=state)
 
     async def back_to_menu(self, callback: CallbackQuery, state: FSMContext):
-        from man_project_2023.telegram_bot.decorators.decorators import history_manager
+        from telegram_bot.decorators.decorators import history_manager
         await ProfileStates.gigs.set()
         await history_manager.back(state=state,
                                    group="gig_preview")

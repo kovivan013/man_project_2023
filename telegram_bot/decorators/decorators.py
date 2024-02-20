@@ -29,22 +29,40 @@ def check_banned(func: Callable):
 
     return wrapper
 
+def check_registered(func: Callable) -> Callable:
+
+    @wraps(func)
+    async def wrapper(*args, **kwargs) -> Any:
+        state: FSMContext = kwargs["state"]
+        response = await UserAPI.get_user(telegram_id=state.user)
+        if response._success:
+            return await func(*args, **kwargs)
+        else:
+            from telegram_bot.handlers.user_handlers import RegisterMH
+            return await RegisterMH.start_register(*args[1:], **kwargs)
+
+    return wrapper
+
+
 def catch_error(func: Callable):
     """
     Catch and report unexpected errors to logs and to user client
     """
     @wraps(func)
     async def wrapper(*args, **kwargs):
-        # try:
+        try:
             return await func(*args, **kwargs)
-        # except Exception as err:
-            from man_project_2023.telegram_bot.handlers.user_handlers import StartMH
+        except Exception as err:
+            from telegram_bot.handlers.user_handlers import StartMH
+            from telegram_bot.classes.utils_classes import context_manager
             callback: CallbackQuery = args[1]
             state = kwargs["state"]
             if type(callback) == type(CallbackQuery()):
                 await callback.answer(text=f"‼ Упс... Виникла несподівана помилка.\n",
                                       show_alert=True)
-                await StartMH.start_menu(callback, state)
+                await context_manager.delete(state)
+                await StartMH.start_menu(callback,
+                                         state=state)
             print(f"Telegram bot error in func {func}\n"
                   f"Exception: {err}")
 
@@ -113,16 +131,6 @@ class HistoryManager(Storage):
                 print(f"ERROR in {self.back}: {err}\nOriginal function: {func.__name__}\n{func}")
             await self._save(state, storage)
         return None
-
-    # def back(self, group: str):
-    #         async def wrapper(*args, **kwargs):
-    #             state = await func(*args, **kwargs)
-    #             return await self.backward(state=state,
-    #                                        group=group)
-    #         return wrapper
-
-
-
 
 history_manager = HistoryManager()
 

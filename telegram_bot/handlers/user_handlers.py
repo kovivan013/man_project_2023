@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+from string import digits
 from pydantic import BaseModel
 
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
@@ -14,7 +15,7 @@ from telegram_bot.classes.api_requests import UserAPI, LocationStructure, Locati
 from telegram_bot.states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
     CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates,
-    GigPreviewStates, State
+    GigPreviewStates, RegisterStates, State
 )
 from telegram_bot.classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
@@ -22,10 +23,10 @@ from telegram_bot.classes.utils_classes import (
 )
 from telegram_bot.keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu, RegisterMenu
 )
 from telegram_bot.decorators.decorators import (
-    catch_error, history_manager
+    catch_error, history_manager, check_registered
 )
 from photos_database.handlers import PhotosDB
 from utils.schemas.api_schemas import (
@@ -36,12 +37,154 @@ utils = Utils()
 
 
 class RegisterMH:
-    pass
+
+    @classmethod
+    async def start_register(cls, message: Message, state: FSMContext) -> None:
+        await RegisterStates.start_register.set()
+        await context_manager.send_default(state=state,
+                                           text=f"👆 *Хочеш стати частиною нас?*\n\n"
+                                                f"Вітаємо, *{message.from_user.username}*! Для користування сервісом необхідно зареєструватись.\n\n"
+                                                f"Гарантуємо, що процес займе не більше *декількох хвилин* :)",
+                                           reply_markup=RegisterMenu.keyboard(),
+                                           image="count_logo")
+
+    @classmethod
+    async def enter_nickname(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await RegisterStates.username.set()
+        await state.update_data({"_payload": UserCreate()})
+        async with state.proxy() as data:
+            data["_payload"].telegram_id = state.user
+        await callback.answer(text="Етап 1")
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=await current_state.state_photo(image="username"),
+            caption=f"👍 Чудово! Для початку уведіть свій нікнейм:\n\n"
+                    f"‼ Нікнейм не має містити більше 32 символів.",
+            parse_mode="Markdown"
+        ),
+        reply_markup=RegisterMenu.username_keyboard()
+        )
+
+    @classmethod
+    async def get_username(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        if not (username := callback.from_user.username):
+            await callback.answer(text=f"❌ Ви не встановили нікнейм у Вашому Telegram-акаунті!\n"
+                                       f"🖊 Ви можете зробити це, або увести власний тут.",
+                                  show_alert=True)
+        else:
+            async with state.proxy() as data:
+                data["_payload"].username = username
+            await context_manager.edit(state=state,
+                                       text=f"Ваш нійнейм: *{username}*\n\n"
+                                            f"👆 Натисніть *\"Далі\"* або уведіть *інший нікнейм*:",
+                                       reply_markup=RegisterMenu.username_keyboard(with_next=True),
+                                       image="username",
+                                       with_placeholder=False)
+
+    @classmethod
+    async def check_nickname(cls, message: Message, state: FSMContext) -> None:
+        async with state.proxy() as data:
+            data["_payload"].username = (username := message.text)
+        await message.delete()
+        await context_manager.edit(state=state,
+                                   text=f"Ваш нійнейм: *{username}*\n\n"
+                                        f"👆 Натисніть *\"Далі\"* або уведіть *інший нікнейм*:",
+                                   reply_markup=RegisterMenu.username_keyboard(with_next=True),
+                                   image="username",
+                                   with_placeholder=False)
+
+    @classmethod
+    async def enter_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await RegisterStates.description.set()
+        await callback.message.edit_media(media=InputMediaPhoto(
+            media=await current_state.state_photo(image="description"),
+            caption=f"📃 Уведіть опис Вашого профіля:\n\n"
+                    f"‼ Опис не має містити більше 512 символів.",
+            parse_mode="Markdown"
+        ),
+            reply_markup=RegisterMenu.description_keyboard()
+        )
+
+    @classmethod
+    async def check_description(cls, message: Message, state: FSMContext) -> None:
+        if len(description := message.text) > 512:
+            await message.delete()
+        else:
+            await message.delete()
+            async with state.proxy() as data:
+                data["_payload"].user_data.description = description
+            await context_manager.edit(state=state,
+                                       text=f"Ваш опис: *{description}*\n\n"
+                                            f"👆 Натисніть *\"Далі\"* або уведіть *інший опис*:",
+                                       reply_markup=RegisterMenu.username_keyboard(with_next=True),
+                                       image="description",
+                                       with_placeholder=False)
+    # @classmethod
+    # async def load_profile_photo(cls, callback: CallbackQuery, state: FSMContext) -> None:
+    #     await RegisterStates.photo.set()
+    #     await callback.answer(text="Етап 2")
+    #     await callback.message.edit_media(media=InputMediaPhoto(
+    #         media=await current_state.state_photo(image="avatar"),
+    #         caption=f"📸 Відправте фотографію (аватар) для Вашого профіля:",
+    #         parse_mode="Markdown"
+    #     ),
+    #     reply_markup=RegisterMenu.photo_keyboard())
+    #
+    # @classmethod
+    # async def save_profile_photo(cls, message: Message, state: FSMContext) -> None:
+    #     pass
+    @classmethod
+    async def enter_phone_number(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await RegisterStates.phone_number.set()
+        await callback.answer(text="Етап 3")
+        await context_manager.delete(state)
+        await context_manager.send_default(state=state,
+                                           text=f"📞 Відправте Ваш номер телефону:\n\n"
+                                                f"‼ Номер буде відображений іншому користувачу лише у випадку, "
+                                                f"коли буде пройдена наша система аутентифікації \"Secret Word\".",
+                                           image="contact",
+                                           reply_markup=RegisterMenu.phone_keyboard()
+                                           )
+
+
+    @classmethod
+    async def check_phone_number(cls, message: Message, state: FSMContext) -> None:
+        await message.delete()
+        if message.text != RegisterMenu.dont_share and message.text != None:
+            msg = await bot.send_message(chat_id=state.chat,
+                                         text=f"❌ *Щоб відправити номер телефону, натисніть кнопку нижче.*",
+                                         parse_mode="Markdown")
+            await asyncio.sleep(3)
+            await msg.delete()
+        elif message.text == RegisterMenu.dont_share:
+            await context_manager.delete(state)
+            await cls.create_account(message,
+                                     state=state)
+        else:
+            await context_manager.delete(state)
+            async with state.proxy() as data:
+                data["_payload"].phone_number = message.contact.phone_number
+            await cls.create_account(message,
+                                     state=state)
+
+
+    @classmethod
+    async def create_account(cls, message: Message, state: FSMContext) -> None:
+        msg = await bot.send_message(chat_id=state.chat,
+                                     text=f"🚴‍♂️ *Реєструємо Вас...*",
+                                     parse_mode="Markdown")
+        response = await UserAPI.create_user(data=await Storage._payload(
+            state=state,
+            dump=True
+        ))
+        await msg.delete()
+        await StartMH.context_manager(message,
+                                      state=state)
 
 
 class StartMH:
 
     @classmethod
+    @check_registered
     @history_manager(group=["add_gig", "change_mode"], onetime=True)
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
         await context_manager.delete(state)
@@ -53,12 +196,12 @@ class StartMH:
         response = await UserAPI.get_user(telegram_id=state.user)
         user = BaseUser().model_validate(response.data)
         await context_manager.send_default(state=state,
-                                           current_state=current_state,
                                            text=f"👋 Вітаємо, *{user.username}*!",
                                            reply_markup=MainMenu.keyboard(mode=user.mode),
                                            image="logo")
 
     @classmethod
+    @check_registered
     async def start_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await context_manager.delete(state)
         await current_state.update_classes(state=state,
@@ -88,7 +231,6 @@ class MarketplaceMH:
         await MarketplaceStates.search_input.set()
         await filters_manager.reset_filters(state)
         await context_manager.edit(state=state,
-                                   current_state=current_state,
                                    text="🔍 *Уведіть пошуковий запит:*",
                                    image="gigs_list",
                                    reply_markup=MarketplaceMenu.search_keyboard(),
@@ -165,7 +307,6 @@ class MyProfileMH:
         user: BaseUser = BaseUser().model_validate(response.data)
 
         await context_manager.edit(state=state,
-                                   current_state=current_state,
                                    reply_markup=MyProfile.info_about_placeholder(),
                                    image="dashboard_profile")
         image = open('img/reg_data_board.png', 'rb')
@@ -186,6 +327,7 @@ class MyProfileMH:
             )
 
     @classmethod
+    @catch_error
     @history_manager(group=["change_mode", "select_type", "gig_preview"], onetime=True)
     async def my_gigs(cls, message: Message, state: FSMContext) -> None:
         await current_state.update_classes(state=state,
@@ -200,7 +342,6 @@ class MyProfileMH:
                                             limit=2)
         document = await marketplace._document(state)
         await context_manager.edit(state=state,
-                                   current_state=current_state,
                                    image="your_gigs",
                                    reply_markup=MyProfile.gigs_placeholder(
                                        document=document
@@ -219,7 +360,6 @@ class MyProfileMH:
         elif callback.data == Controls.backward_callback:
             document = await marketplace.previous_page(state)
         await context_manager.edit(state=state,
-                                   current_state=current_state,
                                    image="your_gigs",
                                    reply_markup=MyProfile.gigs_placeholder(
                                        document=document
@@ -250,6 +390,7 @@ class MyProfileMH:
 class UpdateDescriptionMH:
 
     @classmethod
+    @check_registered
     @history_manager(group="proceed_description", onetime=True)
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await current_state.set_state(state)
@@ -323,6 +464,7 @@ class UpdateUsernameMH:
 class CreateGig:
 
     @classmethod
+    @check_registered
     @history_manager(group="proceed_gig", onetime=True)
     async def enter_name(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await current_state.set_state(state)
@@ -335,7 +477,6 @@ class CreateGig:
 
         # TODO: Mode 0 - ви шукаєте.... Mode 1 - ви знайшли....
         await context_manager.edit(state=state,
-                                   current_state=current_state,
                                    text=f"⌨️ *Уведіть назву оголошення:*",
                                    image="name",
                                    reply_markup=CreateGigMenu.keyboard(),
@@ -536,9 +677,9 @@ class CreateGig:
 
         async with state.proxy() as data:
             file_id = data["file_id"]
-        await PhotosDB.save(telegram_id=state.user,
-                            file_id=file_id,
-                            gig_id=response_data.id)
+        await PhotosDB.save_preview(telegram_id=state.user,
+                                    file_id=file_id,
+                                    gig_id=response_data.id)
 
         if response._success:
             await callback.answer(text=f"✅ Успішно!",
@@ -583,9 +724,36 @@ class GigPreviewMH:
 
 
 def register_user_handlers(dp: Dispatcher) -> None:
+
     dp.register_message_handler(
         StartMH.context_manager, commands=["start"], state=None
     )
+
+    dp.register_callback_query_handler(
+        RegisterMH.enter_nickname, Text(equals=RegisterMenu.start_callback), state=RegisterStates.start_register
+    )
+    dp.register_message_handler(
+        RegisterMH.check_nickname, state=RegisterStates.username
+    )
+    dp.register_callback_query_handler(
+        RegisterMH.get_username, Text(equals=RegisterMenu.from_profile_callback), state=RegisterStates.username
+    )
+    dp.register_callback_query_handler(
+        RegisterMH.enter_description, Text(equals=RegisterMenu.next_callback), state=RegisterStates.username
+    )
+    dp.register_message_handler(
+        RegisterMH.check_description, state=RegisterStates.description
+    )
+    dp.register_callback_query_handler(
+        RegisterMH.enter_phone_number, Text(equals=[RegisterMenu.next_callback, RegisterMenu.skip_callback]), state=RegisterStates.description
+    )
+    dp.register_message_handler(
+        RegisterMH.check_phone_number, content_types=ContentTypes.CONTACT, state=RegisterStates.phone_number
+    )
+    dp.register_message_handler(
+        RegisterMH.check_phone_number, state=RegisterStates.phone_number
+    )
+
     dp.register_callback_query_handler(
         StartMH.start_menu, Text(equals="back_to_main"), state=["*"]
     )

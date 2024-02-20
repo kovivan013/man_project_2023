@@ -33,6 +33,8 @@ class BaseUser(BaseModel):
     telegram_id: int = 0
     username: str = ""
     mode: int = 0
+    phone_number: int = 0
+    created_at: int = 0
     user_data: UserData = UserData()
     gigs: UserGigs = UserGigs()
 
@@ -89,6 +91,7 @@ class DateEnum(Enum):
 class UserCreate(BaseModel):
     telegram_id: int = 0
     username: str = ""
+    phone_number: int = 0
     user_data: Description = Description()
 
 class GigCreate(BaseModel):

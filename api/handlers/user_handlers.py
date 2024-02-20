@@ -26,9 +26,11 @@ def create_user(request_data: UserCreate, response: Response, request: Request, 
     result = DataStructure()
     user_exists = db.query(User).filter(User.telegram_id == request_data.telegram_id).first() is not None
     if user_exists:
-        raise exceptions.ItemExistsException
+        return Reporter.api_exception(exception=exceptions.ItemExistsException,
+                                      message="User already exists")
 
     data = BaseUser().model_validate(request_data.model_dump())
+    data.created_at = int(datetime.datetime.now().timestamp())
 
     result._status = status.HTTP_201_CREATED
     result.data = data.model_dump()
@@ -223,7 +225,7 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
 
     if user is None:
-        raise exceptions.ItemNotFoundException
+        return Reporter.api_exception(exception=exceptions.ItemNotFoundException)
 
     user_instance = BaseUser().model_validate(user.as_dict())
     result.data = user_instance.model_dump()
