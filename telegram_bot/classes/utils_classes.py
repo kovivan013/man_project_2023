@@ -764,6 +764,42 @@ class Marketplace(Storage):
             return document
         return None
 
+    async def get_latest_gigs(self, state: FSMContext,
+                       mode: int = 0,
+                       city: str = "all",
+                       limit: int = 2,
+                       page: int = 1,
+                       from_date: str = "latest",
+                       type: str = "active") -> 'GigsResponse':
+        storage: self = await self._storage(state)
+        response = await UserAPI.get_latest_gigs(request=mode,
+                                                 city=city,
+                                                 limit=limit,
+                                                 page=page,
+                                                 from_date=city,
+                                                 type=type)
+        if response._success:
+            response_messages: list = []
+            gigs = response.data["gigs"]
+            document = GigsResponse().model_validate(response.data["response"])
+            storage.document = document
+
+            for i, v in gigs.items():
+                message_data: GigMessage = GigMessage()
+                gig = BaseGig().model_validate(v)
+                time = self.date(timestamp=gig.data.date)
+                message_data.telegram_id = gig.telegram_id
+                message_data.id = gig.id
+                message_data.text: str = f"{gig.data.name}\n\n" \
+                                         f"" \
+                                         f"📍 *{gig.data.location.data.name}*\n" \
+                                         f"⌚ *{time}*"
+                response_messages.append(message_data)
+            storage.gigs = response_messages
+            await self._save(state, storage)
+            return document
+        return None
+
     async def send_gigs(self, state: FSMContext, reply_markup: Callable):
         storage: self = await self._storage(state)
         for gig in storage.gigs:

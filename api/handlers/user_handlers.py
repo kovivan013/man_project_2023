@@ -127,6 +127,67 @@ def get_gigs(limit: int = 1, page: int = 1, type: GigsEnum = Query(default=GigsE
     db.close()
     return result
 
+@user_router.get("/get_latest_gigs")
+def get_latest_gigs(mode: int = 0, city: str = "", limit: int = 1, page: int = 1, from_date: DateEnum = Query(default=DateEnum.latest),
+             type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):
+    result = DataStructure()
+    document = GigsResponse()
+    response: dict = {}
+    gigs = db.query(User.gigs).all()
+    all_gigs: list = []
+    result.data["gigs"] = {}
+
+    for i in gigs:
+        user = BaseUser().gigs.model_validate(i[0])
+        if values := getattr(user, f"{type.value}"):
+            for j, k in values.items():
+                gig = BaseGig().model_validate(k)
+                if gig.mode == mode:
+                    all_gigs.append({
+                        j: k
+                    })
+
+    if city and city != "all":
+        sorted_gigs: list = []
+        for i in all_gigs:
+            data = BaseGig().model_validate(list(i.values())[0])
+            if data.data.location.data.name.lower() in city.lower():
+                sorted_gigs.append(i)
+        all_gigs = sorted_gigs
+
+    if all_gigs:
+        end = limit * page
+        start = end - limit
+        [response.update(i) for i in all_gigs]
+        sorted_gigs = Utils.sort_by(obj=response,
+                                    path=["data", "date"],
+                                    reverse=from_date._value)
+        response.clear()
+
+        for i, v in enumerate(sorted_gigs.items()):
+            if i in range(start, end):
+                gig_id, data = v
+                result.data["gigs"].update({
+                    gig_id: data
+                })
+
+    rest = 0
+    if len(all_gigs) % limit:
+        rest = 1
+
+    document.gigs = len(all_gigs)
+    document.pages = len(all_gigs) // limit + rest
+    document.page = page
+    document.status = type.value
+
+    result.data["response"] = document
+
+    result._status = status.HTTP_200_OK
+
+    db.close()
+    return result
+
+
 @user_router.get("/v2/gigs/")
 def get_gigs(title: str, city: str = "", limit: int = 1, page: int = 1, from_date: DateEnum = Query(default=DateEnum.latest),
              type: GigsEnum = Query(default=GigsEnum.active), db: Session = Depends(get_db)):

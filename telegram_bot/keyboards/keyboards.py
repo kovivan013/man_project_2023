@@ -340,6 +340,7 @@ class ListMenu(YesOrNo, Controls):
 class MainMenu:
 
     add_gig: str = f"➕ Додати оголошення"
+    dashboard: str = f"📃 Дошка оголошень"
     search: str = f"🔍 Знайти річ"
 
     change_mode: str = "Режим"
@@ -349,6 +350,7 @@ class MainMenu:
     info_about: str = f"ℹ Про проект"
 
     add_gig_callback: str = f"add_gig_callback"
+    dashboard_callback: str = f"dashboard_callback"
     search_callback: str = f"search_callback"
 
     change_mode_callback: str = f"change_mode_callback"
@@ -372,6 +374,10 @@ class MainMenu:
         )
 
         if mode:
+            keyboard.add(
+                InlineKeyboardButton(text=cls.dashboard,
+                                     callback_data=cls.dashboard_callback)
+            )
             keyboard.add(
                 InlineKeyboardButton(text=cls.add_gig,
                                      callback_data=cls.add_gig_callback)

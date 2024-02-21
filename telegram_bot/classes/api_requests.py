@@ -69,6 +69,12 @@ class UserAPI(API):
         return await cls._get_request(endpoint=endpoint)
 
     @classmethod
+    async def get_latest_gigs(cls, mode: int = 0, city: str = "", limit: int = 1,
+                       page: int = 1, from_date: str = "latest", type: str = "active"):
+        endpoint: str = cls.__prefix(f"/get_latest_gigs/?mode={mode}{f'&city={city}' if city else ''}&limit={limit}&page={page}&from_date={from_date}&type={type}")
+        return await cls._get_request(endpoint=endpoint)
+
+    @classmethod
     async def get_gig(cls, telegram_id: int, gig_id: str):
         endpoint: str = cls.__prefix(f"/{telegram_id}/gigs/{gig_id}")
         return await cls._get_request(endpoint=endpoint)
