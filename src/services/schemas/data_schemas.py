@@ -43,5 +43,3 @@ class GigMessage(BaseModel):
     id: str = ""
     text: str = ""
     callback: str = ""
-
-

@@ -919,12 +919,6 @@ class Marketplace(Storage):
 marketplace = Marketplace()
 
 
-# import asyncio
-# m = Marketplace()
-# r = asyncio.run(m.get_user_gigs(telegram_id=1125858430, limit=2, page=1))
-# print(r)
-
-
 
 
 

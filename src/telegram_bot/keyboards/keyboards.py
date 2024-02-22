@@ -6,6 +6,7 @@ from typing import Union
 from dataclasses import dataclass
 import datetime
 
+
 def default_reply_keyboard(one_time_keyboard: bool = True,
                            resize_keyboard: bool = True,
                            row_width: int = 2):
@@ -24,7 +25,6 @@ def default_inline_keyboard(row_width: int = 2):
 
 
 class YesOrNo:
-
     yes: str = f"✅ Так"
     no: str = f"❌ Ні"
     ready: str = f"✅ Готово"
@@ -40,7 +40,6 @@ class YesOrNo:
     skip_callback: str = f"skip_callback"
     save_callback: str = f"save_callback"
     next_callback: str = "next_callback"
-
 
     @classmethod
     def keyboard(cls, is_inline_keyboard: bool = False):
@@ -135,7 +134,6 @@ class Controls:
     short_forward: str = f"▶"
     short_backward: str = f"◀"
 
-
     forward_callback: str = f"forward_control_callback"
     backward_callback: str = f"backward_control_callback"
     close_callback: str = f"close_control_callback"
@@ -171,9 +169,7 @@ class Controls:
         return keyboard
 
 
-
 class Filters(Controls, YesOrNo):
-
     placeholder: str = f"🎛️ Фільтри"
 
     time: str = f"⏰ За часом"
@@ -282,10 +278,12 @@ class Filters(Controls, YesOrNo):
 
         return keyboard
 
+
 class ListMenu(YesOrNo, Controls):
     """
     Вызывать если нужно ввести список элементов, например список тегов
     """
+
     @classmethod
     def keyboard(cls, elements_list: list = [], callback: str = "",
                  with_cancel: bool = True, with_skip: bool = False,
@@ -294,7 +292,7 @@ class ListMenu(YesOrNo, Controls):
 
         if elements_list:
             for i, v in enumerate(elements_list, start=0):
-                if not i%3:
+                if not i % 3:
                     keyboard.add(
                         InlineKeyboardButton(text=v,
                                              callback_data=f"{v}_list_menu")
@@ -338,7 +336,6 @@ class ListMenu(YesOrNo, Controls):
 
 
 class MainMenu:
-
     add_gig: str = f"➕ Додати оголошення"
     dashboard: str = f"📃 Дошка оголошень"
     search: str = f"🔍 Знайти річ"
@@ -414,7 +411,6 @@ class MainMenu:
 
 
 class RegisterMenu(MainMenu, YesOrNo):
-    
     start: str = f"🌟 Почати!"
     start_register: str = f"🌟 Почати реєстрацію!"
     from_profile: str = f"👤 Взяти з Telegram"
@@ -563,7 +559,6 @@ class DropdownMenu(MainMenu):
 
 
 class MyProfile(MainMenu, Controls):
-
     info_about: str = f"🔓 Про себе ▶"
     gigs: str = f"📰 Мої оголошення ▶"
 
@@ -602,6 +597,7 @@ class MyProfile(MainMenu, Controls):
         )
 
         return keyboard
+
     # @classmethod
     # def gigs_keyboard(cls, gigs_type: Union[str, int], type_count: int, page: int, pages: int) -> Union[
     #     InlineKeyboardMarkup]:
@@ -667,8 +663,8 @@ class UpdateProfile(Controls, YesOrNo):
 
         return keyboard
 
-class CreateGigMenu(YesOrNo):
 
+class CreateGigMenu(YesOrNo):
     faq: str = f"❓ Як?"
 
     faq_callback: str = f"❓ Як?"
@@ -706,9 +702,7 @@ class CreateGigMenu(YesOrNo):
         return keyboard
 
 
-
 class CalendarMenu(Controls, YesOrNo):
-
     short_days: list = ["ПН", "ВТ", "СР", "ЧТ", "ПТ", "СБ", "НД"]
     days: list = ["Понеділок", "Вівторок", "Середа", "Четвер", "П'ятниця", "Субота", "Неділя"]
     months = {
@@ -717,7 +711,8 @@ class CalendarMenu(Controls, YesOrNo):
         5: {"month": "Травень", "days": 31, "case": "Травня"}, 6: {"month": "Червень", "days": 30, "case": "Червня"},
         7: {"month": "Липень", "days": 31, "case": "Липня"}, 8: {"month": "Серпень", "days": 31, "case": "Серпня"},
         9: {"month": "Вересень", "days": 30, "case": "Вересня"}, 10: {"month": "Жовтень", "days": 31, "case": "Жовтня"},
-        11: {"month": "Листопад", "days": 30, "case": "Листопада"}, 12: {"month": "Грудень", "days": 31, "case": "Грудня"}
+        11: {"month": "Листопад", "days": 30, "case": "Листопада"},
+        12: {"month": "Грудень", "days": 31, "case": "Грудня"}
     }
 
     now: str = f"🗓️ Зараз"
@@ -726,7 +721,8 @@ class CalendarMenu(Controls, YesOrNo):
 
     @classmethod
     def keyboard(cls, with_cancel: bool = False, with_save: bool = False, with_forward: bool = True,
-                 with_next: bool = False, year: int = None, month: int = None, day: int = None) -> Union[InlineKeyboardMarkup]:
+                 with_next: bool = False, year: int = None, month: int = None, day: int = None) -> Union[
+        InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=7)
 
         args = all([year, month, day])
@@ -750,7 +746,7 @@ class CalendarMenu(Controls, YesOrNo):
         r = 6
 
         if days_in_month - days_to_end - 28 > 0:
-            r+=1
+            r += 1
 
         keyboard.add(
             InlineKeyboardButton(text=f"{cls.months[today.month]['month']}, {today.year}",
@@ -781,7 +777,8 @@ class CalendarMenu(Controls, YesOrNo):
 
         for i in range(1, r):
             for j in range(1, 8):
-                if (day > days_in_month or (i<2 and j < weekday + 1)) or (day > now.day and today.month == now.month and today.year == now.year):
+                if (day > days_in_month or (i < 2 and j < weekday + 1)) or (
+                        day > now.day and today.month == now.month and today.year == now.year):
                     keyboard.insert(
                         InlineKeyboardButton(
                             text=" ",
@@ -806,7 +803,7 @@ class CalendarMenu(Controls, YesOrNo):
         keyboard.add(
             InlineKeyboardButton(text=cls.now,
                                  callback_data=f"now{cls.date_callback}"
-            )
+                                 )
         )
 
         if with_next:
@@ -826,12 +823,11 @@ class CalendarMenu(Controls, YesOrNo):
                                          callback_data=cls.next_callback)
                 )
 
-
         return keyboard
 
-class GigContextMenu(YesOrNo, Controls):
 
-    #TODO: плейсхолдер как и был налаштування, и в back Налаштування ▼, в маркетплейсе будет просто детальніше
+class GigContextMenu(YesOrNo, Controls):
+    # TODO: плейсхолдер как и был налаштування, и в back Налаштування ▼, в маркетплейсе будет просто детальніше
     # Также не забыть добавить обработку на то, твое ли то объявление
 
     # placeholder: str = "⚙️ Налаштування ▲"
@@ -910,7 +906,6 @@ class GigContextMenu(YesOrNo, Controls):
 
 
 class MarketplaceMenu(Filters, MainMenu):
-
     search: str = f"Пошук 🔦"
 
     search_callback: str = f"search_callback"
@@ -951,26 +946,3 @@ class MarketplaceMenu(Filters, MainMenu):
             )
 
         return keyboard
-
-# class SearchMenu(Controls):
-#
-#     search: str = f"Пошук 🔦"
-#
-#     search_callback: str = f"search_callback"
-#
-#     @classmethod
-#     def keyboard(cls, with_search: bool = False) -> Union[InlineKeyboardMarkup]:
-#         keyboard = default_inline_keyboard()
-#
-#         keyboard.add(
-#             InlineKeyboardButton(text=cls.backward,
-#                                  callback_data=cls.backward_callback)
-#         )
-#
-#         if with_search:
-#             keyboard.insert(
-#                 InlineKeyboardButton(text=cls.search,
-#                                      callback_data=cls.search_callback)
-#             )
-#
-#         return keyboard

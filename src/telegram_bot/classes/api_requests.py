@@ -146,35 +146,3 @@ class LocationAPI(API):
 
             return response_data
         return None
-
-
-
-
-
-# import asyncio
-
-# r = asyncio.run(UserAPI.delete_gig(telegram_id=1125858430, gig_id="bf93dd85-f8f4-4546-8303-9c765c354b20"))
-# print(r)
-# r2 = asyncio.run(LocationAPI.get_address(**r))
-# print(r2)
-# print(r.model_dump())
-# import asyncio
-# r = asyncio.run(UserAPI.get_gigs(type="co"))
-# print(r)
-# print(r.model_dump())
-
-# resp = asyncio.run(UserAPI.create_gig(telegram_id=1,
-#                                       mode=1,
-#                                       name="dfgeg",
-#                                       description="dsfhg",
-#                                       location={"latitude": 1.23476,
-#                                                 "longitude": 1.45873},
-#                                       address={"l": 1},
-#                                       date=1701900690,
-#                                       tags=[]))
-# print(resp)
-# resp = asyncio.run(UserAPI.create_user(telegram_id=12341122,
-#                                        username="sjhg",
-#                                        description=""))
-# print(resp)
-
