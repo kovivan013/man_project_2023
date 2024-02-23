@@ -1,5 +1,5 @@
 # Environments
-.idea
+.idea/
 .env
 .venv
 env/
@@ -7,5 +7,5 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-photos_database
-img
+photos_database/
+img/
