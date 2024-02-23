@@ -4,10 +4,8 @@ from typing import Any, Callable, Union
 from aiogram.types import Message, CallbackQuery
 
 from pydantic import BaseModel, ValidationError
-from utils.debug import exceptions
-
-from telegram_bot.classes.api_requests import UserAPI
-from telegram_bot.classes.utils_classes import Storage, FSMContext
+from classes.api_requests import UserAPI
+from classes.utils_classes import Storage, FSMContext
 
 def check_super_admin(func: Callable):
     """
@@ -38,7 +36,7 @@ def check_registered(func: Callable) -> Callable:
         if response._success:
             return await func(*args, **kwargs)
         else:
-            from telegram_bot.handlers.user_handlers import RegisterMH
+            from handlers.user_handlers import RegisterMH
             return await RegisterMH.start_register(*args[1:], **kwargs)
 
     return wrapper
@@ -53,8 +51,8 @@ def catch_error(func: Callable):
         try:
             return await func(*args, **kwargs)
         except Exception as err:
-            from telegram_bot.handlers.user_handlers import StartMH
-            from telegram_bot.classes.utils_classes import context_manager
+            from handlers.user_handlers import StartMH
+            from classes.utils_classes import context_manager
             callback: CallbackQuery = args[1]
             state = kwargs["state"]
             if type(callback) == type(CallbackQuery()):

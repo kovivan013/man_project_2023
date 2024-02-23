@@ -4,23 +4,21 @@ from pydantic import BaseModel
 
 from typing import List, Union, Callable
 
-from telegram_bot.config import dp, Dispatcher
+from config import dp, Dispatcher, bot
 
-from aiogram.types import CallbackQuery, Message
-from aiogram.types import InputMediaPhoto, InputFile
-from telegram_bot.config import bot
-from telegram_bot.classes.api_requests import UserAPI, AdminAPI, LocationAPI
-from telegram_bot.keyboards.keyboards import (
+from aiogram.types import CallbackQuery, Message, InputMediaPhoto, InputFile
+from aiogram.dispatcher.filters.state import State
+from classes.api_requests import UserAPI, AdminAPI, LocationAPI
+from keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile, InlineKeyboardMarkup,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
 )
-from telegram_bot.states.states import FiltersStates, GigPreviewStates, ProfileStates
-from telegram_bot.utils.utils import Utils
-from aiogram.dispatcher.filters.state import State
-from utils.schemas.api_schemas import BaseGig, BaseUser, GigsResponse
-from utils.schemas.schemas import GigMessage
-from photos_database.handlers import PhotosDB
-from telegram_bot.api.utils_schemas import StateStructure, LocationStructure
+from states.states import FiltersStates, GigPreviewStates, ProfileStates
+from utils.utils import Utils
+from schemas.api_schemas import BaseGig, BaseModel, GigsResponse
+from schemas.data_schemas import GigMessage
+# from photos_database.handlers import PhotosDB
+from api.utils_schemas import StateStructure, LocationStructure
 from aiogram.dispatcher.storage import FSMContext
 
 utils = Utils()
@@ -143,7 +141,7 @@ class CurrentState(Storage):
         return placeholder
 
     async def state_photo(self, image: str):
-        path: str = f"img/states_images/{image}.png"
+        path: str = f"images/{image}.png"
         photo = open(path, "rb")
         return photo
 
@@ -613,7 +611,7 @@ class FiltersManager(Storage):
         )
 
     async def set_type(self, callback: CallbackQuery, state: FSMContext):
-        from telegram_bot.decorators.decorators import history_manager
+        from decorators.decorators import history_manager
         storage: self = await self._storage(state)
         document = await marketplace._document(state)
         storage.gigs_type = callback.data.split("_")[0]
@@ -906,12 +904,12 @@ class Marketplace(Storage):
         await callback.answer(text=response.message,
                               show_alert=True)
         if response._success:
-            from telegram_bot.handlers.user_handlers import MyProfileMH
+            from handlers.user_handlers import MyProfileMH
             await MyProfileMH.my_gigs(message=callback.message,
                                       state=state)
 
     async def back_to_menu(self, callback: CallbackQuery, state: FSMContext):
-        from telegram_bot.decorators.decorators import history_manager
+        from decorators.decorators import history_manager
         await ProfileStates.gigs.set()
         await history_manager.back(state=state,
                                    group="gig_preview")

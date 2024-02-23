@@ -1,4 +1,4 @@
-from telegram_bot.config import bot, Dispatcher
+from config import bot, Dispatcher
 from aiogram.types import Message, ContentTypes
 from aiogram.dispatcher.storage import FSMContext
 

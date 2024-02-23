@@ -9,29 +9,30 @@ from aiogram.dispatcher.storage import FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.types import InputMediaPhoto, InputFile
 
-from telegram_bot.config import bot, Dispatcher, dp
-from telegram_bot.utils.utils import Utils
-from telegram_bot.classes.api_requests import UserAPI, LocationStructure, LocationAPI
-from telegram_bot.states.states import (
+from config import bot, Dispatcher, dp
+from utils.utils import Utils
+from classes.api_requests import UserAPI, LocationAPI
+from states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
     CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates,
     GigPreviewStates, RegisterStates, State
 )
-from telegram_bot.classes.utils_classes import (
+from classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
     filters_manager, marketplace, Marketplace, Storage
 )
-from telegram_bot.keyboards.keyboards import (
+from keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu, RegisterMenu
 )
-from telegram_bot.decorators.decorators import (
+from decorators.decorators import (
     catch_error, history_manager, check_registered
 )
-from photos_database.handlers import PhotosDB
-from utils.schemas.api_schemas import (
+# from photos_database.handlers import PhotosDB
+from schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode
 )
+from api.utils_schemas import LocationStructure
 
 utils = Utils()
 
@@ -309,7 +310,7 @@ class MyProfileMH:
         await context_manager.edit(state=state,
                                    reply_markup=MyProfile.info_about_placeholder(),
                                    image="dashboard_profile")
-        image = open('img/reg_data_board.png', 'rb')
+        image = await current_state.state_photo(image="reg_data_board")
         if not await context_manager.states_equals(state):
             await context_manager.appent_delete_list(
                 state=state,

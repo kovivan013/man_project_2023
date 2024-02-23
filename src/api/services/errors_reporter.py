@@ -4,8 +4,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 
-from utils.schemas.schemas import DataStructure
-from utils.debug import exceptions
+from schemas.data_schemas import DataStructure
+from . import exceptions
 
 class Reporter:
 

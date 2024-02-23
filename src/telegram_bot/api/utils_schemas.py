@@ -1,28 +1,5 @@
 from pydantic import BaseModel
 
-# class PayloadStructure:
-#
-#     def add(self,
-#             telegram_id: int = 0,
-#             username: str = "",
-#             name: str = "",
-#             description: str = "",
-#             photo: str = "",
-#             tags: list = [],
-#             location: dict = {},
-#             address: dict = {},
-#             date: int = 0
-#             ):
-#         data: dict = locals()
-#         data.pop("self")
-#         for i, v in data.items():
-#             if v:
-#                 setattr(self, i, v)
-#
-#         print(self.as_dict())
-#
-#     def as_dict(self) -> dict:
-#         return self.__dict__
 
 class StateProxy(BaseModel):
     file_id: str = ""

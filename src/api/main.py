@@ -1,8 +1,8 @@
 import uvicorn
+import os
 from fastapi import FastAPI
 
-from utils.debug.errors_reporter import Reporter
-
+from services.errors_reporter import Reporter
 
 from routers import api_router
 from config import settings

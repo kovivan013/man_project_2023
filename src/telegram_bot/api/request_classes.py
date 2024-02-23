@@ -1,8 +1,8 @@
 import aiohttp
 from abc import ABC, abstractmethod
 
-from telegram_bot.api.utils_schemas import ResponseStructure
-from utils.schemas.schemas import DataStructure
+from .utils_schemas import ResponseStructure
+from schemas.data_schemas import DataStructure
 
 
 class RequestSender(ABC):

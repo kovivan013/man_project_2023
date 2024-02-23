@@ -1,7 +1,6 @@
 from pydantic import BaseModel
 from typing import List, Dict, Union
 from enum import Enum
-from api.utils.utils import Utils
 
 
 class Description(BaseModel):

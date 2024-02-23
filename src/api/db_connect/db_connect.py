@@ -1,4 +1,4 @@
-from api.config import db
+from config import db
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker

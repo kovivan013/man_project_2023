@@ -5,17 +5,14 @@ from fastapi import APIRouter, Depends, Response, Request, Query
 from starlette import status
 from sqlalchemy.orm import Session
 
-from photos_database.handlers import PhotosDB
-
-from api.db_connect.db_connect import get_db
-from api.models.models import User
-from api.classes.db_requests import PostRequest
-from utils.schemas.api_schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode
-from utils.debug import exceptions
-from utils.debug.errors_reporter import Reporter
-from api.utils.utils import Utils
-
-from utils.schemas.schemas import DataStructure
+from db_connect.db_connect import get_db
+from db_connect.db_requests import PostRequest
+from models.models import User
+from schemas.schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode
+from schemas.data_schemas import DataStructure
+from services import exceptions
+from services.utils import Utils
+from services.errors_reporter import Reporter
 
 user_router = APIRouter()
 
@@ -287,7 +284,7 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
 
     if user is None:
         return Reporter.api_exception(exception=exceptions.ItemNotFoundException)
-
+    print(user)
     user_instance = BaseUser().model_validate(user.as_dict())
     result.data = user_instance.model_dump()
     result._status = status.HTTP_200_OK
