@@ -23,22 +23,23 @@ from classes.utils_classes import (
 )
 from keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu, RegisterMenu
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu, RegisterMenu,
+    DashboardMenu
 )
 from decorators.decorators import (
-    catch_error, history_manager, check_registered
+    catch_error, history_manager, check_registered, reset_filters
 )
-# from photos_database.handlers import PhotosDB
 from schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode
 )
 from api.utils_schemas import LocationStructure
+from photos_database.handlers import PhotosDB
 
 utils = Utils()
 
 
 class RegisterMH:
-
+    #TODO: сделать рег в PhotosDB и позже перенести на S3
     @classmethod
     async def start_register(cls, message: Message, state: FSMContext) -> None:
         await RegisterStates.start_register.set()
@@ -177,6 +178,14 @@ class RegisterMH:
             state=state,
             dump=True
         ))
+        if response._success():
+            await msg.delete()
+            await StartMH.context_manager(message,
+                                          state=state)
+        else:
+            await msg.edit_text(text=f"⚠ Ой-ой... Виникла несподівана помилка!\n"
+                                     f"🤚 Ви автоматично повернетесь на екран реєстрації через декілька секунд.")
+            await asyncio.sleep(3)
         await msg.delete()
         await StartMH.context_manager(message,
                                       state=state)
@@ -189,13 +198,15 @@ class StartMH:
     @history_manager(group=["add_gig", "change_mode"], onetime=True)
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
         await context_manager.delete(state)
-        await current_state.set_state(state)
         await current_state.update_classes(state=state,
                                            keyboard_class=MainMenu,
                                            state_class=MainMenuStates)
         await MainMenuStates.start_menu.set()
         response = await UserAPI.get_user(telegram_id=state.user)
         user = BaseUser().model_validate(response.data)
+        await state.update_data({
+            "mode": user.mode
+        })
         await context_manager.send_default(state=state,
                                            text=f"👋 Вітаємо, *{user.username}*!",
                                            reply_markup=MainMenu.keyboard(mode=user.mode),
@@ -217,6 +228,9 @@ class StartMH:
         data: dict = {
             "mode": {0: 1, 1: 0}[mode]
         }
+        await state.update_data({
+            "mode": data["mode"]
+        })
         await UserAPI.update_mode(telegram_id=state.user,
                                   data=data)
         await callback.answer(text=f"Тепер Ви у режимі {MainMenu.modes[data['mode']]}")
@@ -227,10 +241,9 @@ class StartMH:
 class MarketplaceMH:
 
     @classmethod
+    @reset_filters
     async def search(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await current_state.set_state(state)
         await MarketplaceStates.search_input.set()
-        await filters_manager.reset_filters(state)
         await context_manager.edit(state=state,
                                    text="🔍 *Уведіть пошуковий запит:*",
                                    image="gigs_list",
@@ -250,7 +263,7 @@ class MarketplaceMH:
                                        with_placeholder=False)
 
     @classmethod
-    @history_manager(group=["add_gig", "gig_preview"], onetime=True)
+    @history_manager(group=["add_gig", "gig_preview", "filters_menu"], onetime=True)
     async def request(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await MarketplaceStates.gigs_list.set()
         request = await marketplace._document(state)
@@ -258,7 +271,7 @@ class MarketplaceMH:
                                    request=request.key)
         document = await marketplace._document(state)
         await context_manager.edit(state=state,
-                                   text=f"🗒️ За Вашим пошуковим запитом було знайдено *{document.gigs}* оголошень!",
+                                   text=f"🗒️ За Вашим пошуковим запитом було знайдено *{(num := document.gigs)}* {utils.get_ending(num, ['оголошення', 'оголошення', 'оголошень'])}!",
                                    image="gigs_list",
                                    reply_markup=MarketplaceMenu.keyboard(page=document.page,
                                                                          pages=document.pages),
@@ -287,19 +300,49 @@ class MarketplaceMH:
         await marketplace.send_gigs(state=state,
                                     reply_markup=GigContextMenu.marketplace_keyboard)
 
+class LatestDashboardMH:
+
+    @classmethod
+    @reset_filters
+    @history_manager(group=["add_gig", "gig_preview", "filters_menu"], onetime=True)
+    async def latest_dashboard(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await MarketplaceStates.latest_dashboard.set()
+        document = await marketplace.get_latest_gigs(state=state)
+        await context_manager.edit(state=state,
+                                   text=f"🔍 *Тут розміщено останні оголошення про загублені речі.*",
+                                   image="gigs_dashboard",
+                                   reply_markup=DashboardMenu.gigs_placeholder(document=document),
+                                   with_placeholder=False)
+        await marketplace.send_gigs(state=state,
+                                    reply_markup=GigContextMenu.marketplace_keyboard)
+
+    @classmethod
+    @history_manager(group="gig_preview", onetime=True)
+    async def update_page(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await context_manager.delete_context_messages(state)
+        document = await marketplace._document(state)
+        if callback.data == Controls.forward_callback:
+            document = await marketplace.next_page(state)
+        elif callback.data == Controls.backward_callback:
+            document = await marketplace.previous_page(state)
+        await context_manager.edit(state=state,
+                                   text=f"🗒️ За Вашим пошуковим запитом було знайдено *{document.gigs}* оголошень!",
+                                   image="gigs_list",
+                                   reply_markup=MarketplaceMenu.keyboard(page=document.page,
+                                                                         pages=document.pages),
+                                   with_placeholder=False)
+        await marketplace.get_latest_gigs(state=state,
+                                          page=document.page)
+        await marketplace.send_gigs(state=state,
+                                    reply_markup=GigContextMenu.marketplace_keyboard)
+
 
 class MyProfileMH:
-
-    # @classmethod
-    # async def select_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-    #     await context_manager.select(state)
-    #     await ProfileStates.select_menu.set()
 
     @classmethod
     @catch_error
     @history_manager(group=["add_gig", "change_mode"], onetime=True)
     async def info_about(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await current_state.set_state(state)
         await current_state.update_classes(state=state,
                                            keyboard_class=MyProfile,
                                            state_class=MyProfile)
@@ -394,7 +437,6 @@ class UpdateDescriptionMH:
     @check_registered
     @history_manager(group="proceed_description", onetime=True)
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await current_state.set_state(state)
         await UpdateDescriptionStates.description.set()
         await state.update_data({"_payload": UpdateDescription()})
         await context_manager.edit(state=state,
@@ -463,12 +505,11 @@ class UpdateUsernameMH:
 
 
 class CreateGig:
-
+    #TODO: пофиксить баг с удалением сообщения при возвращения с меню подтверждения отмены создания объявления
     @classmethod
-    @check_registered
     @history_manager(group="proceed_gig", onetime=True)
+    @check_registered
     async def enter_name(cls, callback: CallbackQuery, state: FSMContext) -> None:
-        await current_state.set_state(state)
         await current_state.update_classes(state=state,
                                            keyboard_class=UpdateProfile,
                                            state_class=CreateGigStates)
@@ -763,6 +804,16 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
 
     dp.register_callback_query_handler(
+        LatestDashboardMH.latest_dashboard, Text(equals=MainMenu.dashboard_callback), state=MainMenuStates.start_menu
+    )
+    dp.register_callback_query_handler(
+        LatestDashboardMH.update_page, Text(equals=Controls.forward_callback), state=MarketplaceStates.latest_dashboard
+    )
+    dp.register_callback_query_handler(
+        LatestDashboardMH.update_page, Text(equals=Controls.backward_callback), state=MarketplaceStates.latest_dashboard
+    )
+
+    dp.register_callback_query_handler(
         MarketplaceMH.search, Text(equals=MainMenu.search_callback), state=MainMenuStates.start_menu
     )
     dp.register_message_handler(
@@ -829,7 +880,8 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
 
     dp.register_callback_query_handler(
-        filters_manager.filters_menu, Text(equals=Filters.placeholder_callback), state=MarketplaceStates.gigs_list
+        filters_manager.filters_menu, Text(equals=Filters.placeholder_callback), state=[MarketplaceStates.gigs_list,
+                                                                                        MarketplaceStates.latest_dashboard]
     )
     dp.register_callback_query_handler(
         filters_manager.time_filter, Text(equals=Filters.time_callback), state=FiltersStates.filters
@@ -872,7 +924,7 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
 
     dp.register_callback_query_handler(
-        MarketplaceMH.request, Text(equals=Filters.backward_callback), state=FiltersStates.filters
+        filters_manager.back_to_menu, Text(equals=Filters.backward_callback), state=FiltersStates.filters
     )
     # dp.register_callback_query_handler(
     #     MyProfileMH.my_gigs, Text(equals=Filters.backward_callback), state=ProfileStates.gigs
@@ -888,7 +940,8 @@ def register_user_handlers(dp: Dispatcher) -> None:
     dp.register_callback_query_handler(
         CreateGig.enter_name, Text(equals=MyProfile.add_gig_callback), state=[MainMenuStates.start_menu,
                                                                               ProfileStates.info_about,
-                                                                              MarketplaceStates.gigs_list]
+                                                                              MarketplaceStates.gigs_list,
+                                                                              MarketplaceStates.latest_dashboard]
     )
     dp.register_message_handler(
         CreateGig.check_name, state=CreateGigStates.name
@@ -962,7 +1015,8 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         marketplace.gig_preview, Text(endswith=[GigContextMenu.preview_callback, GigContextMenu.detail_callback]), state=[ProfileStates.gigs,
-                                                                                                                          MarketplaceStates.gigs_list]
+                                                                                                                          MarketplaceStates.gigs_list,
+                                                                                                                          MarketplaceStates.latest_dashboard]
     )
     dp.register_callback_query_handler(
         marketplace.back_to_menu, Text(equals=Controls.backward_callback), state=GigPreviewStates.preview

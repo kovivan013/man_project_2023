@@ -5,7 +5,8 @@ from aiogram.types import Message, CallbackQuery
 
 from pydantic import BaseModel, ValidationError
 from classes.api_requests import UserAPI
-from classes.utils_classes import Storage, FSMContext
+from photos_database.handlers import PhotosDB
+from classes.utils_classes import Storage, FSMContext, filters_manager
 
 def check_super_admin(func: Callable):
     """
@@ -39,6 +40,14 @@ def check_registered(func: Callable) -> Callable:
             from handlers.user_handlers import RegisterMH
             return await RegisterMH.start_register(*args[1:], **kwargs)
 
+    return wrapper
+
+def reset_filters(func: Callable) -> Callable:
+    @wraps(func)
+    async def wrapper(*args, **kwargs) -> Any:
+        state = kwargs["state"]
+        await filters_manager.reset_filters(state)
+        await func(*args, **kwargs)
     return wrapper
 
 

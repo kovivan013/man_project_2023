@@ -25,3 +25,11 @@ class Utils(CalendarMenu):
         if timestamp:
             return now.timestamp().__int__()
         return now
+
+    @staticmethod
+    def get_ending(num: int, list_of_words: list) -> str:
+        cases = [2, 0, 1, 1, 1, 2]
+        if 4 < num % 100 < 20:
+            return list_of_words[2]
+        else:
+            return list_of_words[cases[min(num % 10, 5)]]

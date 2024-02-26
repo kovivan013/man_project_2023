@@ -284,7 +284,6 @@ def get_user(telegram_id: int, db: Session = Depends(get_db)):
 
     if user is None:
         return Reporter.api_exception(exception=exceptions.ItemNotFoundException)
-    print(user)
     user_instance = BaseUser().model_validate(user.as_dict())
     result.data = user_instance.model_dump()
     result._status = status.HTTP_200_OK

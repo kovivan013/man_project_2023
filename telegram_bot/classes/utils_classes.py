@@ -17,7 +17,7 @@ from states.states import FiltersStates, GigPreviewStates, ProfileStates
 from utils.utils import Utils
 from schemas.api_schemas import BaseGig, BaseModel, GigsResponse
 from schemas.data_schemas import GigMessage
-# from photos_database.handlers import PhotosDB
+from photos_database.handlers import PhotosDB
 from api.utils_schemas import StateStructure, LocationStructure
 from aiogram.dispatcher.storage import FSMContext
 
@@ -29,11 +29,12 @@ class Storage:
     def _KEY(self):
         pass
 
-    async def _storage(self, state: FSMContext):
+    async def _storage(self, state: FSMContext, custom_key: str = ""):
         data = await state.get_data()
-        model = type(self)(**data.setdefault(self._KEY, vars(self)))
+        model = type(self)(**data.setdefault(custom_key if custom_key else self._KEY, vars(self)))
         return model
 
+    #TODO: connect custom key to save
     async def _save(self, state: FSMContext, result):
         await state.update_data({self._KEY: vars(result)})
 
@@ -48,6 +49,10 @@ class Storage:
         data = await state.get_data()
         data.pop("_payload")
         await state.set_data(data)
+
+    @staticmethod
+    async def get_local_mode(state: FSMContext):
+        return (await state.get_data()).get("mode")
 
 
 class CurrentState(Storage):
@@ -471,7 +476,12 @@ class FiltersManager(Storage):
         "oldest": "старих",
     }
 
-    def __init__(self, time: str = "latest", city: str = "all", tags: list = [], gigs_type: str = "active"):
+    def __init__(self,
+                 time: str = "latest",
+                 city: str = "all",
+                 tags: list = [],
+                 gigs_type: str = "active"
+                 ):
         self.time = time
         self.city = city
         self.tags = tags
@@ -481,8 +491,12 @@ class FiltersManager(Storage):
         storage: self = await self._storage(state)
         return storage
 
+    async def __custom_key(self, state: FSMContext) -> str:
+        return f"{await self.get_local_mode(state)}_{self._KEY}"
+
     async def reset_filters(self, state: FSMContext):
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         storage.time = "latest"
         storage.city = "all"
         storage.tags = []
@@ -490,7 +504,8 @@ class FiltersManager(Storage):
 
     async def filters_menu(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.filters.set()
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         await context_manager.edit(state=state,
                                    image="filters",
                                    reply_markup=Filters.keyboard(time=storage.time,
@@ -499,9 +514,15 @@ class FiltersManager(Storage):
                                    with_placeholder=False)
         await context_manager.delete_context_messages(state)
 
+    async def back_to_menu(self, callback: CallbackQuery, state: FSMContext) -> None:
+        from decorators.decorators import history_manager
+        await history_manager.back(state=state,
+                                   group="filters_menu")
+
     async def time_filter(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.time_filter.set()
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         image = await current_state.state_photo(image="time")
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
@@ -512,7 +533,8 @@ class FiltersManager(Storage):
         )
 
     async def set_time(self, callback: CallbackQuery, state: FSMContext):
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         storage.time = callback.data
         image = await current_state.state_photo(image="time")
         await callback.message.edit_media(media=InputMediaPhoto(
@@ -527,7 +549,8 @@ class FiltersManager(Storage):
 
     async def location_filter(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.location_filter.set()
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         image = await current_state.state_photo(image="location")
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
@@ -539,7 +562,8 @@ class FiltersManager(Storage):
 
     async def set_location(self, message: Message, state: FSMContext):
         # TODO: location reset to default value
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         storage.city = message.text
         await message.delete()
         location = await LocationAPI.get_location(name=storage.city)
@@ -556,7 +580,8 @@ class FiltersManager(Storage):
         await storage._save(state, storage)
 
     async def reset_location(self, callback: CallbackQuery, state: FSMContext):
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         storage.city = "all"
         await self._save(state, storage)
         await self.filters_menu(callback=callback,
@@ -564,7 +589,8 @@ class FiltersManager(Storage):
 
     async def tags_filter(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.tags_filter.set()
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         image = await current_state.state_photo(image="tags")
         await callback.message.edit_media(media=InputMediaPhoto(
             media=image,
@@ -576,7 +602,8 @@ class FiltersManager(Storage):
         )
 
     async def add_tag(self, message: Message, state: FSMContext):
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         if message.text not in storage.tags:
             storage.tags.append(message.text)
         await message.delete()
@@ -589,7 +616,8 @@ class FiltersManager(Storage):
         await self._save(state, storage)
 
     async def remove_tag(self, callback: CallbackQuery, state: FSMContext):
-        storage: self = await self._storage(state)
+        storage: self = await self._storage(state,
+                                            custom_key=await self.__custom_key(state))
         element = callback.data[:callback.data.rindex("_list_menu")]
         if element in storage.tags:
             storage.tags.remove(element)
@@ -636,6 +664,7 @@ class Marketplace(Storage):
     Класс который обеспечивает работу системы поиска проекта, также все функции связанные с собственными объявлениями пользователя
     Функции фильтров и прочего
     """
+    #TODO: добавить ретурн документа даже при неуспешном запросе
 
     _KEY = "marketplace"
 
@@ -764,17 +793,17 @@ class Marketplace(Storage):
 
     async def get_latest_gigs(self, state: FSMContext,
                        mode: int = 0,
-                       city: str = "all",
+                       city: str = "",
                        limit: int = 2,
                        page: int = 1,
                        from_date: str = "latest",
                        type: str = "active") -> 'GigsResponse':
         storage: self = await self._storage(state)
-        response = await UserAPI.get_latest_gigs(request=mode,
-                                                 city=city,
+        filters = await filters_manager.get_filters(state)
+        response = await UserAPI.get_latest_gigs(city=filters.city,
                                                  limit=limit,
                                                  page=page,
-                                                 from_date=city,
+                                                 from_date=filters.time,
                                                  type=type)
         if response._success:
             response_messages: list = []

@@ -16,6 +16,7 @@ class MainMenuStates(StatesGroup):
 class MarketplaceStates(StatesGroup):
     search_input = State()
     gigs_list = State()
+    latest_dashboard = State()
 
 class ProfileStates(StatesGroup):
     info_about = State()

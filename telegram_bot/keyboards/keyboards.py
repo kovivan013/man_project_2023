@@ -375,10 +375,6 @@ class MainMenu:
                 InlineKeyboardButton(text=cls.dashboard,
                                      callback_data=cls.dashboard_callback)
             )
-            keyboard.add(
-                InlineKeyboardButton(text=cls.add_gig,
-                                     callback_data=cls.add_gig_callback)
-            )
         else:
             keyboard.add(
                 InlineKeyboardButton(text=cls.search,
@@ -598,19 +594,6 @@ class MyProfile(MainMenu, Controls):
 
         return keyboard
 
-    # @classmethod
-    # def gigs_keyboard(cls, gigs_type: Union[str, int], type_count: int, page: int, pages: int) -> Union[
-    #     InlineKeyboardMarkup]:
-    #     keyboard = default_inline_keyboard(row_width=1)
-    #
-    #     keyboard.add(
-    #         InlineKeyboardButton(text=f"{Filters.types[gigs_type](type_count)} ▼",
-    #                              callback_data=cls.change_type_callback)
-    #     )
-    #     keyboard.row(*cls.pages_keyboard(page=page,
-    #                                      pages=pages))
-    #
-    #     return keyboard
     @classmethod
     def gigs_placeholder(cls, document: GigsResponse) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard(row_width=1)
@@ -620,6 +603,26 @@ class MyProfile(MainMenu, Controls):
                                  callback_data=cls.info_about_callback),
             InlineKeyboardButton(text=f"{Filters.types[document.status](document.gigs)} ▼",
                                  callback_data=cls.change_type_callback)
+        )
+        keyboard.row(*cls.pages_keyboard(page=document.page,
+                                         pages=document.pages))
+
+        return keyboard
+
+
+class DashboardMenu(Filters, MainMenu):
+
+    @classmethod
+    def gigs_placeholder(cls, document: GigsResponse) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=f"↩ На головну",
+                                 callback_data="back_to_main"),
+            InlineKeyboardButton(text=cls.placeholder,
+                                 callback_data=cls.placeholder_callback),
+            InlineKeyboardButton(text=cls.add_gig,
+                                 callback_data=cls.add_gig_callback)
         )
         keyboard.row(*cls.pages_keyboard(page=document.page,
                                          pages=document.pages))
