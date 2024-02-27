@@ -52,6 +52,8 @@ class GigData(BaseModel):
     address: dict = {}
     date: int = 0
     tags: list = []
+    question: str = ""
+    secret_word: str = ""
     location: Location = Location()
 
 class BaseGig(BaseModel):

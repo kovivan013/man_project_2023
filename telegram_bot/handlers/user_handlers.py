@@ -27,7 +27,7 @@ from keyboards.keyboards import (
     DashboardMenu
 )
 from decorators.decorators import (
-    catch_error, history_manager, check_registered, reset_filters
+    catch_error, history_manager, check_registered, reset_filters, private_message
 )
 from schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode
@@ -41,6 +41,7 @@ utils = Utils()
 class RegisterMH:
     #TODO: сделать рег в PhotosDB и позже перенести на S3
     @classmethod
+    @private_message
     async def start_register(cls, message: Message, state: FSMContext) -> None:
         await RegisterStates.start_register.set()
         await context_manager.send_default(state=state,
@@ -178,7 +179,7 @@ class RegisterMH:
             state=state,
             dump=True
         ))
-        if response._success():
+        if response._success:
             await msg.delete()
             await StartMH.context_manager(message,
                                           state=state)
@@ -194,8 +195,9 @@ class RegisterMH:
 class StartMH:
 
     @classmethod
-    @check_registered
     @history_manager(group=["add_gig", "change_mode"], onetime=True)
+    @check_registered
+    @private_message
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
         await context_manager.delete(state)
         await current_state.update_classes(state=state,
@@ -434,8 +436,8 @@ class MyProfileMH:
 class UpdateDescriptionMH:
 
     @classmethod
-    @check_registered
     @history_manager(group="proceed_description", onetime=True)
+    @check_registered
     async def modify_description(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await UpdateDescriptionStates.description.set()
         await state.update_data({"_payload": UpdateDescription()})

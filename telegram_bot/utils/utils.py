@@ -3,7 +3,6 @@ import datetime
 from keyboards.keyboards import DropdownMenu, CalendarMenu
 from aiogram.types import Message
 
-#TODO: super Calendar cls
 class Utils(CalendarMenu):
 
     def file_id(self, message: Message) -> str:

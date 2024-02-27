@@ -9,7 +9,7 @@ services:
       - ./telegram_bot/.env
     restart: unless-stopped
 
-  api:
+  bot_api:
     container_name: api
     image: bot_api
     build: ./api

@@ -16,7 +16,7 @@ from keyboards.keyboards import (
 from states.states import FiltersStates, GigPreviewStates, ProfileStates
 from utils.utils import Utils
 from schemas.api_schemas import BaseGig, BaseModel, GigsResponse
-from schemas.data_schemas import GigMessage
+from schemas.data_schemas import GigMessage, DataStructure
 from photos_database.handlers import PhotosDB
 from api.utils_schemas import StateStructure, LocationStructure
 from aiogram.dispatcher.storage import FSMContext
@@ -35,8 +35,8 @@ class Storage:
         return model
 
     #TODO: connect custom key to save
-    async def _save(self, state: FSMContext, result):
-        await state.update_data({self._KEY: vars(result)})
+    async def _save(self, state: FSMContext, result, custom_key: str = ""):
+        await state.update_data({custom_key if custom_key else self._KEY: vars(result)})
 
     @staticmethod
     async def _payload(state: FSMContext, dump: bool = False) -> BaseModel:
@@ -496,17 +496,18 @@ class FiltersManager(Storage):
 
     async def reset_filters(self, state: FSMContext):
         storage: self = await self._storage(state,
-                                            custom_key=await self.__custom_key(state))
+                                            custom_key=(c := await self.__custom_key(state)))
         storage.time = "latest"
         storage.city = "all"
         storage.tags = []
-        await self._save(state, storage)
+        await self._save(state, storage, c)
 
     async def filters_menu(self, callback: CallbackQuery, state: FSMContext):
         await FiltersStates.filters.set()
         storage: self = await self._storage(state,
                                             custom_key=await self.__custom_key(state))
         await context_manager.edit(state=state,
+                                   text=f"🧼 *Меню фільтрів перед Вами:*",
                                    image="filters",
                                    reply_markup=Filters.keyboard(time=storage.time,
                                                                  city=storage.city,
@@ -534,7 +535,7 @@ class FiltersManager(Storage):
 
     async def set_time(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state,
-                                            custom_key=await self.__custom_key(state))
+                                            custom_key=(c := await self.__custom_key(state)))
         storage.time = callback.data
         image = await current_state.state_photo(image="time")
         await callback.message.edit_media(media=InputMediaPhoto(
@@ -544,7 +545,7 @@ class FiltersManager(Storage):
         ),
         reply_markup=Filters.time_keyboard(time=callback.data)
         )
-        await storage._save(state, storage)
+        await storage._save(state, storage, c)
 
 
     async def location_filter(self, callback: CallbackQuery, state: FSMContext):
@@ -563,7 +564,7 @@ class FiltersManager(Storage):
     async def set_location(self, message: Message, state: FSMContext):
         # TODO: location reset to default value
         storage: self = await self._storage(state,
-                                            custom_key=await self.__custom_key(state))
+                                            custom_key=(c := await self.__custom_key(state)))
         storage.city = message.text
         await message.delete()
         location = await LocationAPI.get_location(name=storage.city)
@@ -577,13 +578,13 @@ class FiltersManager(Storage):
             reply_markup=Filters.location_keyboard(),
             with_placeholder=False
         )
-        await storage._save(state, storage)
+        await storage._save(state, storage, c)
 
     async def reset_location(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state,
-                                            custom_key=await self.__custom_key(state))
+                                            custom_key=(c := await self.__custom_key(state)))
         storage.city = "all"
-        await self._save(state, storage)
+        await self._save(state, storage, c)
         await self.filters_menu(callback=callback,
                                 state=state)
 
@@ -603,7 +604,7 @@ class FiltersManager(Storage):
 
     async def add_tag(self, message: Message, state: FSMContext):
         storage: self = await self._storage(state,
-                                            custom_key=await self.__custom_key(state))
+                                            custom_key=(c := await self.__custom_key(state)))
         if message.text not in storage.tags:
             storage.tags.append(message.text)
         await message.delete()
@@ -613,15 +614,15 @@ class FiltersManager(Storage):
                                    reply_markup=ListMenu.keyboard(elements_list=storage.tags,
                                                                   with_ready=True),
                                    with_placeholder=False)
-        await self._save(state, storage)
+        await self._save(state, storage, c)
 
     async def remove_tag(self, callback: CallbackQuery, state: FSMContext):
         storage: self = await self._storage(state,
-                                            custom_key=await self.__custom_key(state))
+                                            custom_key=(c := await self.__custom_key(state)))
         element = callback.data[:callback.data.rindex("_list_menu")]
         if element in storage.tags:
             storage.tags.remove(element)
-            await self._save(state, storage)
+            await self._save(state, storage, c)
             await callback.message.edit_reply_markup(
                 reply_markup=ListMenu.keyboard(
                     elements_list=storage.tags,
@@ -668,6 +669,17 @@ class Marketplace(Storage):
 
     _KEY = "marketplace"
 
+    modes: dict = {
+        0: {
+            0: "Загублено",
+            1: "Знайдено"
+        },
+        1: {
+            0: "загублену",
+            1: "знайдену"
+        }
+    }
+
     def __init__(self, document: GigsResponse = GigsResponse(), gigs: list = [], open_id: int = 0):
         self.document = document
         self.gigs = gigs
@@ -695,6 +707,9 @@ class Marketplace(Storage):
             storage.document.page -= 1
         await self._save(state, storage)
         return storage.document
+
+    async def __check_response(self, response: DataStructure):
+        pass
 
     @staticmethod
     def date(timestamp: int, full_date: bool = False):
@@ -835,7 +850,7 @@ class Marketplace(Storage):
             if media is not None:
                 await context_manager.appent_delete_list(
                     state=state,
-                    message=await bot.send_photo(chat_id=state.user,
+                    message=await bot.send_photo(chat_id=state.chat,
                                                  photo=InputFile(media),
                                                  caption=gig.text,
                                                  reply_markup=reply_markup(telegram_id=gig.telegram_id,
@@ -900,7 +915,7 @@ class Marketplace(Storage):
                   f"" \
                   f"{data.data.description}\n\n" \
                   f"" \
-                  f"Інформація про {modes[1][data.mode]} річ:\n" \
+                  f"Інформація про {modes[1][data.mode]} річ:\n\n" \
                   f"📅 {self.date(timestamp=data.data.date, full_date=True)}\n" \
                   f"🗺 {data.data.location.data.type} {data.data.location.data.name}\n" \
                   f"" \
@@ -945,7 +960,9 @@ class Marketplace(Storage):
 
 marketplace = Marketplace()
 
+class MessagesManager(Storage):
 
+    _KEY = "messages_manager"
 
-
-
+    async def send_message_to_user(self, state: FSMContext):
+        pass

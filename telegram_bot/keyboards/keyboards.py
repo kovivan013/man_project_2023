@@ -122,7 +122,6 @@ class YesOrNo:
 
 
 class Controls:
-    # TODO: Controls Menu Param types: [LIST, DICT, TUPLE]
 
     forward: str = f"Вперед ▶"
     backward: str = f"◀ Назад"
@@ -405,6 +404,17 @@ class MainMenu:
 
         return keyboard
 
+    @classmethod
+    def link_keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=f"👆 Тицяй сюди!!",
+                                 url="https://t.me/FindOutIt_Bot?start")
+        )
+
+        return keyboard
+
 
 class RegisterMenu(MainMenu, YesOrNo):
     start: str = f"🌟 Почати!"
@@ -514,7 +524,6 @@ class DropdownMenu(MainMenu):
     #
     # режим select (можно выбрать несколько вариантов чего-то например для удаления)
 
-    # TODO: Возможно уберу, поскольку это в тексте сообщения + На пк - лучше как сейчас, на телефона и так и так
     filters_sign: str = f"Оберіть необхідний фільтр ✅"
     menu_sign: str = f"Оберіть необхідне меню 💻"
     select_sign: str = f"Оберіть потрібні варіанти 🔑"
@@ -830,7 +839,6 @@ class CalendarMenu(Controls, YesOrNo):
 
 
 class GigContextMenu(YesOrNo, Controls):
-    # TODO: плейсхолдер как и был налаштування, и в back Налаштування ▼, в маркетплейсе будет просто детальніше
     # Также не забыть добавить обработку на то, твое ли то объявление
 
     # placeholder: str = "⚙️ Налаштування ▲"
@@ -949,3 +957,6 @@ class MarketplaceMenu(Filters, MainMenu):
             )
 
         return keyboard
+
+class AdminMenu:
+    pass

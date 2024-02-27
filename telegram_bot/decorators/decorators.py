@@ -1,27 +1,26 @@
 import asyncio
 from functools import wraps
+from config import bot, settings
 from typing import Any, Callable, Union
 from aiogram.types import Message, CallbackQuery
 
 from pydantic import BaseModel, ValidationError
 from classes.api_requests import UserAPI
 from photos_database.handlers import PhotosDB
+from keyboards.keyboards import MainMenu
 from classes.utils_classes import Storage, FSMContext, filters_manager
 
 def check_super_admin(func: Callable):
-    """
-    Check admin permissions from list in settings
-    """
     @wraps(func)
-    async def wrapper(*args, **kwargs):
-        return await func(*args, **kwargs)
+    async def wrapper(*args, **kwargs) -> Any:
+        state: FSMContext = kwargs["state"]
+        telegram_id: int = state.user
+        if telegram_id in settings.ADMINS:
+            return await func(*args, **kwargs)
 
     return wrapper
 
 def check_banned(func: Callable):
-    """
-    Check user is_banned status
-    """
     @wraps(func)
     async def wrapper(*args, **kwargs):
         return await func(*args, **kwargs)
@@ -42,12 +41,25 @@ def check_registered(func: Callable) -> Callable:
 
     return wrapper
 
+def private_message(func: Callable) -> Callable:
+    @wraps(func)
+    async def wrapper(*args, **kwargs) -> Any:
+        state: FSMContext = kwargs["state"]
+        if state.chat == state.user:
+            return await func(*args, **kwargs)
+        else:
+            await bot.send_message(chat_id=state.chat,
+                                   text=f"❌ *FindIt Bot поки що не доступний у групових чатах!*",
+                                   reply_markup=MainMenu.link_keyboard(),
+                                   parse_mode="Markdown")
+    return wrapper
+
 def reset_filters(func: Callable) -> Callable:
     @wraps(func)
     async def wrapper(*args, **kwargs) -> Any:
         state = kwargs["state"]
         await filters_manager.reset_filters(state)
-        await func(*args, **kwargs)
+        return await func(*args, **kwargs)
     return wrapper
 
 
