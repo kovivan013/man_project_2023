@@ -4,24 +4,23 @@ from pydantic import BaseModel
 
 from typing import List, Union, Callable
 
-from config import dp, Dispatcher, bot
+from config import dp, Dispatcher, bot, settings
 
 from aiogram.types import CallbackQuery, Message, InputMediaPhoto, InputFile
 from aiogram.dispatcher.filters.state import State
 from classes.api_requests import UserAPI, AdminAPI, LocationAPI
 from keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile, InlineKeyboardMarkup,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, default_inline_keyboard
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, AdminMenu, default_inline_keyboard
 )
 from states.states import FiltersStates, GigPreviewStates, ProfileStates
-from utils.utils import Utils
+from utils.utils import utils
 from schemas.api_schemas import BaseGig, BaseModel, GigsResponse
 from schemas.data_schemas import GigMessage, DataStructure
-from photos_database.handlers import PhotosDB
+from photos_database.handlers import S3DB
 from api.utils_schemas import StateStructure, LocationStructure
 from aiogram.dispatcher.storage import FSMContext
 
-utils = Utils()
 
 class Storage:
 
@@ -845,8 +844,8 @@ class Marketplace(Storage):
     async def send_gigs(self, state: FSMContext, reply_markup: Callable):
         storage: self = await self._storage(state)
         for gig in storage.gigs:
-            media = PhotosDB.get(telegram_id=gig.telegram_id,
-                                 gig_id=gig.id)
+            media = S3DB.get(telegram_id=gig.telegram_id,
+                             gig_id=gig.id)
             if media is not None:
                 await context_manager.appent_delete_list(
                     state=state,
@@ -889,11 +888,16 @@ class Marketplace(Storage):
         await self._save(state, storage)
 
     async def gig_preview(self, callback: CallbackQuery, state: FSMContext):
-        await context_manager.delete_context_messages(state)
-        await GigPreviewStates.preview.set()
         telegram_id, gig_id = tuple(callback.data.split("_")[:2])
         response = await UserAPI.get_gig(telegram_id=telegram_id,
                                          gig_id=gig_id)
+        if not response._success:
+            await callback.answer(text=f"❌ Виникла несподівана помилка при спробі отримання даних про оголошення!\n"
+                                       f"Будь ласка, спробуйте пізніше.",
+                                  show_alert=True)
+            return
+        await context_manager.delete_context_messages(state)
+        await GigPreviewStates.preview.set()
         data = BaseGig().model_validate(response.data)
         n = "\n"
         message_id = (await context_manager._storage(state)).message.message_id
@@ -910,7 +914,6 @@ class Marketplace(Storage):
         callback_data: dict = {
             GigContextMenu.detail_callback: True,
         }
-        print(callback.data)
         caption = f"{modes[0][data.mode]} *{data.data.name.lower()}*\n\n" \
                   f"" \
                   f"{data.data.description}\n\n" \
@@ -922,12 +925,11 @@ class Marketplace(Storage):
                   f"{f'{n}#' + ' #'.join(data.data.tags) + f'{n}{n}' if data.data.tags else n}" \
                   f"" \
                   f"🌟 *Ваша річ? Просто натисніть на кнопку під повідомленням!*"
-        print("_".join(callback.data.split("_")[-2:]))
         await bot.edit_message_media(
             media=InputMediaPhoto(
                 media=InputFile(
-                    PhotosDB.get(telegram_id=telegram_id,
-                                 gig_id=gig_id)
+                    S3DB.get(telegram_id=telegram_id,
+                             gig_id=gig_id)
                 ),
                 caption=caption,
                 parse_mode="Markdown"
@@ -952,6 +954,38 @@ class Marketplace(Storage):
             await MyProfileMH.my_gigs(message=callback.message,
                                       state=state)
 
+    async def send_check_request(
+            self,
+            from_id: int,
+            from_username: str,
+            telegram_id: int,
+            gig_id: int
+    ) -> None:
+        photo = InputFile(
+            S3DB.get(telegram_id=telegram_id,
+                     gig_id=gig_id)
+        )
+        data = BaseGig().model_validate(
+            (await UserAPI.get_gig(telegram_id=telegram_id,
+                                   gig_id=gig_id)).data
+        )
+        #TODO API REQUEST
+        await bot.send_photo(chat_id=settings.HELPERS_CHAT,
+                             photo=photo,
+                             caption=f"Новий запит на створення оголошення від [{from_username}](t.me/{from_username}) (`{from_id}`)\n\n"
+                                     f"Назва: {data.data.name};\n"
+                                     f"Опис: {data.data.description};\n"
+                                     f"Локація: {data.data.location.data.type} {data.data.location.data.name}\n"
+                                     f"Дата: {self.date(timestamp=data.data.date, full_date=True)}\n"
+                                     f"Теги: {data.data.tags}\n\n"
+                                     f"Секретне запитання: {data.data.question};\n"
+                                     f"Відповідь: {data.data.secret_word}\n\n"
+                                     f"*Дозволяємо створювати оголошення?*",
+                             reply_markup=AdminMenu.check_keyboard(telegram_id=telegram_id,
+                                                                   gig_id=gig_id),
+                             parse_mode="Markdown")
+
+
     async def back_to_menu(self, callback: CallbackQuery, state: FSMContext):
         from decorators.decorators import history_manager
         await ProfileStates.gigs.set()
@@ -966,3 +1000,4 @@ class MessagesManager(Storage):
 
     async def send_message_to_user(self, state: FSMContext):
         pass
+

@@ -34,6 +34,7 @@ class BaseUser(BaseModel):
     mode: int = 0
     phone_number: int = 0
     created_at: int = 0
+    messages: dict = {}
     user_data: UserData = UserData()
     gigs: UserGigs = UserGigs()
 
@@ -107,6 +108,11 @@ class UpdateDescription(BaseModel):
 
 class UpdateMode(Mode):
     pass
+
+class SendMessage(BaseModel):
+    text: str = ""
+    timestamp: int = 0
+    reply_markup: dict = {}
 
 # class UpdateDescription(Description):
 #     pass

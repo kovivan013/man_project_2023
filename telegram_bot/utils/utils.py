@@ -32,3 +32,5 @@ class Utils(CalendarMenu):
             return list_of_words[2]
         else:
             return list_of_words[cases[min(num % 10, 5)]]
+
+utils = Utils()

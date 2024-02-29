@@ -12,6 +12,7 @@ class User(BaseModel):
     mode = Column(SmallInteger, default=0)
     created_at = Column(BigInteger, default=0)
     phone_number = Column(BigInteger, default=0)
+    messages = Column(JSON, default={})
 
     def as_dict(self) -> dict:
         return self.__dict__

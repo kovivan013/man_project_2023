@@ -180,7 +180,7 @@ class Filters(Controls, YesOrNo):
         "active": lambda c: f"Активні оголошення ({c})",
         "completed": lambda c: f"Завершені оголошення ({c})",
         "pending": lambda c: f"Очікують публікації ({c})",
-        "archived": lambda c: f"Видалені оголошення ({c})"
+        "archived": lambda c: f"Архівовані оголошення ({c})"
     }
 
     placeholder_callback: str = f"filters_placeholde_callback"
@@ -341,7 +341,7 @@ class MainMenu:
 
     change_mode: str = "Режим"
     profile: str = f"👤 Профіль"
-    settings: str = f"⚙️ Налаштування"
+    settings: str = f"📄 Повідомлення"
     support: str = f"🆘 Підтримка"
     info_about: str = f"ℹ Про проект"
 
@@ -958,5 +958,20 @@ class MarketplaceMenu(Filters, MainMenu):
 
         return keyboard
 
-class AdminMenu:
-    pass
+class AdminMenu(YesOrNo):
+
+    @classmethod
+    def check_keyboard(cls, telegram_id: int, gig_id: int) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        yes_value = f"{telegram_id}_{gig_id}_accept"
+        no_value = f"{telegram_id}_{gig_id}_decline"
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.yes,
+                                 callback_data=yes_value),
+            InlineKeyboardButton(text=cls.no,
+                                 callback_data=no_value)
+        )
+
+        return keyboard

@@ -6,7 +6,6 @@ from aiogram.types import Message, CallbackQuery
 
 from pydantic import BaseModel, ValidationError
 from classes.api_requests import UserAPI
-from photos_database.handlers import PhotosDB
 from keyboards.keyboards import MainMenu
 from classes.utils_classes import Storage, FSMContext, filters_manager
 
@@ -149,6 +148,9 @@ class HistoryManager(Storage):
             except Exception as err:
                 print(f"ERROR in {self.back}: {err}\nOriginal function: {func.__name__}\n{func}")
             await self._save(state, storage)
+        else:
+            await self.back(state=state,
+                            group="main_menu")
         return None
 
 history_manager = HistoryManager()

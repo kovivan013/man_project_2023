@@ -103,6 +103,15 @@ class UserAPI(API):
 class AdminAPI(API):
     __prefix = lambda endpoint: "/admin" + endpoint
 
+    @classmethod
+    async def accept_create(cls, telegram_id: int, gig_id: str) -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}/{gig_id}/accept_create")
+        return await cls._get_request(endpoint=endpoint)
+
+    @classmethod
+    async def decline_create(cls, telegram_id: int, gig_id: str) -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}/{gig_id}/decline_request")
+        return await cls._get_request(endpoint=endpoint)
 
 class SystemAPI(API):
     __prefix = lambda endpoint: "/system" + endpoint

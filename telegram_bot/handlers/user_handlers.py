@@ -1,7 +1,5 @@
 import asyncio
 import datetime
-from string import digits
-from pydantic import BaseModel
 
 from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.types.message import ContentTypes
@@ -10,7 +8,7 @@ from aiogram.dispatcher.filters import Text
 from aiogram.types import InputMediaPhoto, InputFile
 
 from config import bot, Dispatcher, dp
-from utils.utils import Utils
+from utils.utils import utils
 from classes.api_requests import UserAPI, LocationAPI
 from states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
@@ -33,9 +31,7 @@ from schemas.api_schemas import (
     GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode
 )
 from api.utils_schemas import LocationStructure
-from photos_database.handlers import PhotosDB
-
-utils = Utils()
+from photos_database.handlers import S3DB
 
 
 class RegisterMH:
@@ -195,7 +191,7 @@ class RegisterMH:
 class StartMH:
 
     @classmethod
-    @history_manager(group=["add_gig", "change_mode"], onetime=True)
+    @history_manager(group=["add_gig", "change_mode", "main_menu"], onetime=True)
     @check_registered
     @private_message
     async def context_manager(cls, message: Message, state: FSMContext) -> None:
@@ -204,11 +200,38 @@ class StartMH:
                                            keyboard_class=MainMenu,
                                            state_class=MainMenuStates)
         await MainMenuStates.start_menu.set()
+        # await MarketplaceStates.gigs_list.set()
         response = await UserAPI.get_user(telegram_id=state.user)
         user = BaseUser().model_validate(response.data)
         await state.update_data({
             "mode": user.mode
         })
+        # keyboard = InlineKeyboardMarkup(row_width=2)
+        # keyboard.add(
+        #     InlineKeyboardButton(text="◀ Назад",
+        #                          callback_data="jhdfg"),
+        #     InlineKeyboardButton(text="Чат для зв'язку",
+        #                          url="t.me/kovivan013")
+        # )
+        # await context_manager.send_default(state=state,
+        #                                    text=f"✅ Перевірка пройдена успішна\\!\n\n"
+        #                                         f"*Номер телефону*: ||\\+380675354501||",
+        #                                    reply_markup=keyboard,
+        #                                    image="allow_access")
+        # keyboard = InlineKeyboardMarkup(row_width=2)
+        # keyboard.add(
+        #     InlineKeyboardButton(text="🛑 Скасувати",
+        #                          callback_data="jhdfg"),
+        #     InlineKeyboardButton(text=f"🤷‍♂️ Не знаю",
+        #                          callback_data="shjg")
+        # )
+        # await context_manager.send_default(state=state,
+        #                                    text=f"Для отримання контактів власника цього оголошення, необхідно дати відповідть на секретне запитання:\n\n\"*Скільки ключів у зв'язці?*\"",
+        #                                    reply_markup=keyboard,
+        #                                    image="keys")
+        # await message.answer(text=f"e",
+        #                      reply_markup=GigContextMenu.marketplace_keyboard(telegram_id=state.user,
+        #                                                                       gig_id="add2539d-a3d8-4f89-8c04-d2bf5de60618"))
         await context_manager.send_default(state=state,
                                            text=f"👋 Вітаємо, *{user.username}*!",
                                            reply_markup=MainMenu.keyboard(mode=user.mode),
@@ -221,6 +244,7 @@ class StartMH:
         await current_state.update_classes(state=state,
                                            keyboard_class=MainMenu,
                                            state_class=MainMenuStates)
+        print("end start func")
         await cls.context_manager(message=callback.message,
                                   state=state)
 
@@ -518,10 +542,13 @@ class CreateGig:
         await CreateGigStates.name.set()
         await state.update_data({"_payload": GigCreate()})
         await list_manager.reset(state)
-
-        # TODO: Mode 0 - ви шукаєте.... Mode 1 - ви знайшли....
+        modes = {
+            0: "Що Ви шукаєте?",
+            1: "Що Ви знайшли?"
+        }
         await context_manager.edit(state=state,
-                                   text=f"⌨️ *Уведіть назву оголошення:*",
+                                   text=f"⌨️ *{modes[await UserAPI.get_mode(telegram_id=state.user)]}*\n"
+                                        f"Уведіть лише назву річі.",
                                    image="name",
                                    reply_markup=CreateGigMenu.keyboard(),
                                    with_placeholder=False)
@@ -721,12 +748,16 @@ class CreateGig:
 
         async with state.proxy() as data:
             file_id = data["file_id"]
-        await PhotosDB.save_preview(telegram_id=state.user,
+        await S3DB.save_preview(telegram_id=state.user,
                                     file_id=file_id,
                                     gig_id=response_data.id)
 
         if response._success:
-            await callback.answer(text=f"✅ Успішно!",
+            await marketplace.send_check_request(from_id=response_data.telegram_id,
+                                                 from_username=callback.from_user.username,
+                                                 telegram_id=response_data.telegram_id,
+                                                 gig_id=response_data.id)
+            await callback.answer(text=f"✅ Запит на створення відправлено!",
                                   show_alert=True)
         else:
             await callback.answer(text=f"❌ Помилка!\n"
@@ -761,10 +792,6 @@ class CreateGig:
             parse_mode="Markdown"
         ),
         reply_markup=YesOrNo.keyboard(is_inline_keyboard=True))
-
-
-class GigPreviewMH:
-    pass
 
 
 def register_user_handlers(dp: Dispatcher) -> None:

@@ -6,7 +6,8 @@ from pydantic_settings import BaseSettings
 from dotenv import load_dotenv
 
 class Settings(BaseSettings):
-    BASE_API_URL: str = "http://bot_api:8008"
+    # "http://bot_api:8008"
+    BASE_API_URL: str = "http://127.0.0.1:8008"
     ADMINS: list = [1125858430, 1067582521, 1055676461]
     HELPERS_CHAT: int = -4186817944
 

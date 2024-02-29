@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from db_connect.db_connect import get_db
 from db_connect.db_requests import PostRequest
 from models.models import User
-from schemas.schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode
+from schemas.schemas import UserCreate, GigCreate, UpdateDescription, BaseGig, BaseUser, GigsEnum, DateEnum, GigsResponse, UpdateMode, Mode, SendMessage
 from schemas.data_schemas import DataStructure
 from services import exceptions
 from services.utils import Utils
@@ -50,7 +50,7 @@ def create_gig(request_data: GigCreate, response: Response, request: Request, db
     user_instance = BaseUser().model_validate(user.as_dict())
     data = BaseGig().model_validate(request_data.model_dump())
     data.id = utils.get_uuid()
-    user_instance.gigs.active.update({data.id: data.model_dump()})
+    user_instance.gigs.pending.update({data.id: data.model_dump()})
     user.gigs = user_instance.gigs.model_dump()
 
     db.commit()
@@ -486,3 +486,42 @@ def delete_gigs(telegram_id: int, db: Session = Depends(get_db)):
 
     db.commit()
     db.close()
+
+@user_router.get("/{telegram_id}/messages")
+def get_messages(telegram_id: int, db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+
+    if user is None:
+        return Reporter.api_exception(exceptions.ItemNotFoundException)
+
+    print(user.messages)
+    result.data = user.messages
+    result._status = status.HTTP_200_OK
+
+    db.close()
+    return result
+
+@user_router.post("/{telegram_id}/send_message")
+def send_message(telegram_id: int, request_data: SendMessage, db: Session = Depends(get_db)):
+    result = DataStructure()
+    user = db.query(User).filter(User.telegram_id == telegram_id).first()
+
+    if user is None:
+        return Reporter.api_exception(exceptions.ItemNotFoundException)
+
+    request_data.timestamp = int(datetime.datetime.now().timestamp())
+    messages: dict = user.messages.copy()
+    key = max(list(map(int, messages.keys())), default=0) + 1
+    messages.update({
+        key: (data := request_data.model_dump())
+    })
+    print(messages)
+    user.messages = messages
+    db.commit()
+
+    result.data = data
+    result._status = status.HTTP_200_OK
+
+    db.close()
+    return result
