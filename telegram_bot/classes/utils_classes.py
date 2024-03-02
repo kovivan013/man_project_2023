@@ -969,6 +969,7 @@ class Marketplace(Storage):
             (await UserAPI.get_gig(telegram_id=telegram_id,
                                    gig_id=gig_id)).data
         )
+        print(data.model_dump())
         #TODO API REQUEST
         await bot.send_photo(chat_id=settings.HELPERS_CHAT,
                              photo=photo,

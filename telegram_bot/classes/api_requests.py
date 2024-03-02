@@ -1,7 +1,9 @@
 import asyncio
 import requests
 
-from config import BASE_API_URL
+from aiogram.dispatcher.storage import FSMContext
+from config import BASE_API_URL, bot
+from schemas.api_schemas import SendMessage
 from api.request_classes import GetRequest, PostRequest, PatchRequest, DeleteRequest
 from schemas.data_schemas import DataStructure
 
@@ -99,6 +101,30 @@ class UserAPI(API):
         return await cls._patch_request(endpoint=endpoint,
                                         data=data)
 
+    @classmethod
+    async def get_messages(cls, telegram_id: int, offset: int = 10) -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}/messages/?offset={offset}")
+        return await cls._get_request(endpoint=endpoint)
+
+    @classmethod
+    async def send_message(cls, state: FSMContext, telegram_id: int, data: dict) -> 'DataStructure':
+        endpoint: str = cls.__prefix(f"/{telegram_id}/send_message")
+        response = await cls._post_request(endpoint=endpoint,
+                                       data=data)
+
+        if response._success:
+            from .utils_classes import context_manager
+            partial_data = SendMessage().model_validate(response.data)
+            await context_manager.appent_delete_list(
+                state=state,
+                message=await bot.send_message(chat_id=telegram_id,
+                                               text=partial_data.text,
+                                               reply_markup=partial_data.reply_markup,
+                                               parse_mode="Markdown",
+                                               disable_notification=True)
+            )
+
+        return response
 
 class AdminAPI(API):
     __prefix = lambda endpoint: "/admin" + endpoint

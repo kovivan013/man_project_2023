@@ -488,15 +488,25 @@ def delete_gigs(telegram_id: int, db: Session = Depends(get_db)):
     db.close()
 
 @user_router.get("/{telegram_id}/messages")
-def get_messages(telegram_id: int, db: Session = Depends(get_db)):
+def get_messages(telegram_id: int, offset: int = 10, db: Session = Depends(get_db)):
     result = DataStructure()
     user = db.query(User).filter(User.telegram_id == telegram_id).first()
 
     if user is None:
         return Reporter.api_exception(exceptions.ItemNotFoundException)
-
-    print(user.messages)
-    result.data = user.messages
+    key = max(list(map(int, user.messages.keys())), default=0)
+    partial_data = {}
+    print(key)
+    if key:
+        for i, v in enumerate(range(key, key-offset if offset < key else 0, -1), start=1):
+            print(user.messages[str(v)])
+            partial_data.update({
+                i: user.messages[str(v)]
+            })
+    else:
+        result.message = f"*Поки що, у вас немає повідомлень...*"
+    print(partial_data)
+    result.data = partial_data
     result._status = status.HTTP_200_OK
 
     db.close()
@@ -516,7 +526,6 @@ def send_message(telegram_id: int, request_data: SendMessage, db: Session = Depe
     messages.update({
         key: (data := request_data.model_dump())
     })
-    print(messages)
     user.messages = messages
     db.commit()
 

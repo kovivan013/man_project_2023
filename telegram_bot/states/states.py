@@ -43,6 +43,8 @@ class CreateGigStates(StatesGroup):
     location = State()
     date = State()
     tags = State()
+    question = State()
+    secret_word = State()
     check_data = State()
     backward = State()
 
@@ -57,3 +59,5 @@ class GigPreviewStates(StatesGroup):
     secret_word = State()
     contacts = State()
 
+class MessagesStates(StatesGroup):
+    messages_menu = State()

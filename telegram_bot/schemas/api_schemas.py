@@ -110,5 +110,9 @@ class UpdateDescription(BaseModel):
 class UpdateMode(Mode):
     pass
 
+class SendMessage(BaseModel):
+    text: str = ""
+    timestamp: int = 0
+    reply_markup: dict = {}
 # class UpdateDescription(Description):
 #     pass

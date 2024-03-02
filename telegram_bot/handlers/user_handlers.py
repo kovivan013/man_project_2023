@@ -13,7 +13,7 @@ from classes.api_requests import UserAPI, LocationAPI
 from states.states import (
     ProfileStates, UpdateDescriptionStates, UpdateUsernameStates,
     CreateGigStates, MainMenuStates, MarketplaceStates, FiltersStates,
-    GigPreviewStates, RegisterStates, State
+    GigPreviewStates, RegisterStates, MessagesStates, State
 )
 from classes.utils_classes import (
     calendar_menu, current_state, context_manager, list_manager,
@@ -22,13 +22,13 @@ from classes.utils_classes import (
 from keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile,
     CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, MarketplaceMenu, RegisterMenu,
-    DashboardMenu
+    DashboardMenu, MessagesButtons
 )
 from decorators.decorators import (
     catch_error, history_manager, check_registered, reset_filters, private_message
 )
 from schemas.api_schemas import (
-    GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode
+    GigCreate, UserCreate, UpdateDescription, BaseGig, BaseUser, Mode, SendMessage
 )
 from api.utils_schemas import LocationStructure
 from photos_database.handlers import S3DB
@@ -175,11 +175,7 @@ class RegisterMH:
             state=state,
             dump=True
         ))
-        if response._success:
-            await msg.delete()
-            await StartMH.context_manager(message,
-                                          state=state)
-        else:
+        if not response._success:
             await msg.edit_text(text=f"⚠ Ой-ой... Виникла несподівана помилка!\n"
                                      f"🤚 Ви автоматично повернетесь на екран реєстрації через декілька секунд.")
             await asyncio.sleep(3)
@@ -446,11 +442,12 @@ class MyProfileMH:
     @classmethod
     @history_manager(group="edit_description", onetime=True)
     async def edit_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
-
+        #TODO: заменить картинку
         await current_state.update_classes(state=state,
                                            keyboard_class=UpdateProfile,
                                            state_class=ProfileStates)
         await ProfileStates.edit_menu.set()
+
         await context_manager.select(state=state,
                                      current_state=current_state,
                                      delete_messages=True,
@@ -705,6 +702,57 @@ class CreateGig:
                                    with_placeholder=False)
 
     @classmethod
+    @history_manager(group="proceed_gig", onetime=True)
+    async def enter_question(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await CreateGigStates.question.set()
+        await context_manager.edit(state=state,
+                                   text=f"⌨️ *Уведіть секретне запитання:*\n\n"
+                                        f"Воно буде використане для надання доступу до Ваших контактів авторизованому користувачу.",
+                                   image="description",
+                                   reply_markup=CreateGigMenu.keyboard(),
+                                   with_placeholder=False)
+
+    @classmethod
+    @history_manager(group="proceed_gig", onetime=True)
+    async def check_question(cls, message: Message, state: FSMContext) -> None:
+        if len(message.text) < 128:
+            async with state.proxy() as data:
+                data["_payload"].data.question = message.text
+            await message.delete()
+            await context_manager.edit(state=state,
+                                       text=f"Ви увели: *{message.text}*\n\n"
+                                            f""
+                                            f"👆 Натисніть *\"Далі\"* або уведіть *інше секретне запитання*:",
+                                       image="description",
+                                       reply_markup=CreateGigMenu.keyboard(with_next=True),
+                                       with_placeholder=False)
+
+    @classmethod
+    @history_manager(group="proceed_gig", onetime=True)
+    async def enter_answer(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        await CreateGigStates.secret_word.set()
+        await context_manager.edit(state=state,
+                                   text=f"❔ *Уведіть секретне слово (відповідь на секретне запитання):*",
+                                   image="description",
+                                   reply_markup=CreateGigMenu.keyboard(),
+                                   with_placeholder=False)
+
+    @classmethod
+    @history_manager(group="proceed_gig", onetime=True)
+    async def check_answer(cls, message: Message, state: FSMContext) -> None:
+        if len(text := message.text) < 64 and len(text.split()) == 1:
+            async with state.proxy() as data:
+                data["_payload"].data.secret_word = message.text
+            await message.delete()
+            await context_manager.edit(state=state,
+                                       text=f"Секретне слово: *{message.text}*\n\n"
+                                            f""
+                                            f"👆 Натисніть *\"Далі\"* або уведіть *інше секретне слово*:",
+                                       image="description",
+                                       reply_markup=CreateGigMenu.keyboard(with_next=True),
+                                       with_placeholder=False)
+
+    @classmethod
     @catch_error
     @history_manager(group="proceed_gig", onetime=True)
     async def confirm_create(cls, callback: CallbackQuery, state: FSMContext) -> None:
@@ -726,6 +774,9 @@ class CreateGig:
                f"Дата: *{date}*\n" \
                f"Місце: *{address.type} {address.name}*\n" \
                f"{'Теги: *#*' + ' *#*'.join(_payload.data.tags) + f'{n}{n}' if _payload.data.tags else n}" \
+               f"" \
+               f"Секретне запитання: *{_payload.data.question}*\n" \
+               f"Відповідь: *{_payload.data.secret_word}*\n\n" \
                f"" \
                f"*Публікуємо оголошення?*"
 
@@ -794,6 +845,34 @@ class CreateGig:
         reply_markup=YesOrNo.keyboard(is_inline_keyboard=True))
 
 
+class MessagesMH:
+
+    @classmethod
+    async def messages_menu(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        response = await UserAPI.get_messages(telegram_id=state.user)
+        if response._success:
+            await MessagesStates.messages_menu.set()
+            await context_manager.edit(state=state,
+                                       text="*Меню повідомлень перед Вами:*" if not response.message else response.message,
+                                       reply_markup=MessagesButtons.keyboard(),
+                                       image="messages",
+                                       with_placeholder=False)
+            for v in response.data.values():
+                message_data = SendMessage().model_validate(v)
+                await context_manager.appent_delete_list(
+                    state=state,
+                    message=await bot.send_message(chat_id=state.user,
+                                                   text=message_data.text,
+                                                   reply_markup=message_data.reply_markup,
+                                                   parse_mode="Markdown",
+                                                   disable_notification=True)
+                )
+        else:
+            await callback.answer(text=f"‼ Упс... Виникла несподівана помилка.",
+                                  show_alert=True)
+
+
+
 def register_user_handlers(dp: Dispatcher) -> None:
 
     dp.register_message_handler(
@@ -830,6 +909,13 @@ def register_user_handlers(dp: Dispatcher) -> None:
     )
     dp.register_callback_query_handler(
         StartMH.change_mode, Text(equals=MainMenu.change_mode_callback), state=["*"]
+    )
+
+    dp.register_callback_query_handler(
+        MessagesMH.messages_menu, Text(equals=MainMenu.messages_callback), state=MainMenuStates.start_menu
+    )
+    dp.register_callback_query_handler(
+        StartMH.start_menu, Text(equals=Controls.backward_callback), state=MessagesStates.messages_menu
     )
 
     dp.register_callback_query_handler(
@@ -1006,10 +1092,22 @@ def register_user_handlers(dp: Dispatcher) -> None:
         CreateGig.add_tag, state=CreateGigStates.tags
     )
     dp.register_callback_query_handler(
+        CreateGig.enter_question, Text(equals=[CreateGigMenu.next_callback, CreateGigMenu.skip_callback]), state=CreateGigStates.tags
+    )
+    dp.register_message_handler(
+        CreateGig.check_question, state=CreateGigStates.question
+    )
+    dp.register_callback_query_handler(
+        CreateGig.enter_answer, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.question
+    )
+    dp.register_message_handler(
+        CreateGig.check_answer, state=CreateGigStates.secret_word
+    )
+    dp.register_callback_query_handler(
         list_manager.remove, Text(endswith="_list_menu"), state=CreateGigStates.tags
     )
     dp.register_callback_query_handler(
-        CreateGig.confirm_create, Text(equals=[CreateGigMenu.skip_callback, CreateGigMenu.next_callback]), state=CreateGigStates.tags
+        CreateGig.confirm_create, Text(equals=CreateGigMenu.next_callback), state=CreateGigStates.secret_word
     )
     dp.register_callback_query_handler(
         CreateGig.create, Text(equals=YesOrNo.yes_callback), state=CreateGigStates.check_data

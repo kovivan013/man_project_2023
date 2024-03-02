@@ -341,7 +341,7 @@ class MainMenu:
 
     change_mode: str = "Режим"
     profile: str = f"👤 Профіль"
-    settings: str = f"📄 Повідомлення"
+    messages: str = f"📄 Повідомлення"
     support: str = f"🆘 Підтримка"
     info_about: str = f"ℹ Про проект"
 
@@ -351,7 +351,7 @@ class MainMenu:
 
     change_mode_callback: str = f"change_mode_callback"
     profile_callback: str = f"profile_callback"
-    settings_callback: str = f"settings_callback"
+    messages_callback: str = f"settings_callback"
     support_callback: str = f"support_callback"
     info_about_callback: str = f"info_about_callback"
 
@@ -383,8 +383,8 @@ class MainMenu:
         keyboard.add(
             InlineKeyboardButton(text=cls.profile,
                                  callback_data=cls.profile_callback),
-            InlineKeyboardButton(text=cls.settings,
-                                 callback_data=cls.settings_callback),
+            InlineKeyboardButton(text=cls.messages,
+                                 callback_data=cls.messages_callback),
             InlineKeyboardButton(text=cls.support,
                                  callback_data=cls.support_callback),
             InlineKeyboardButton(text=cls.info_about,
@@ -975,3 +975,18 @@ class AdminMenu(YesOrNo):
         )
 
         return keyboard
+
+
+class MessagesButtons(GigContextMenu):
+
+    @classmethod
+    def keyboard(cls) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.backward,
+                                 callback_data=cls.backward_callback)
+        )
+
+        return keyboard
+
