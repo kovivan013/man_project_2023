@@ -336,7 +336,7 @@ class LatestDashboardMH:
                                    reply_markup=DashboardMenu.gigs_placeholder(document=document),
                                    with_placeholder=False)
         await marketplace.send_gigs(state=state,
-                                    reply_markup=GigContextMenu.marketplace_keyboard)
+                                    reply_markup=GigContextMenu.dashboard_keyboard)
 
     @classmethod
     @history_manager(group="gig_preview", onetime=True)
@@ -540,7 +540,7 @@ class CreateGig:
         await state.update_data({"_payload": GigCreate()})
         await list_manager.reset(state)
         modes = {
-            0: "Що Ви шукаєте?",
+            0: "Що Ви загубили?",
             1: "Що Ви знайшли?"
         }
         await context_manager.edit(state=state,
@@ -704,6 +704,10 @@ class CreateGig:
     @classmethod
     @history_manager(group="proceed_gig", onetime=True)
     async def enter_question(cls, callback: CallbackQuery, state: FSMContext) -> None:
+        if not await UserAPI.get_mode(telegram_id=state.user):
+            await cls.confirm_create(callback,
+                                     state=state)
+            return
         await CreateGigStates.question.set()
         await context_manager.edit(state=state,
                                    text=f"⌨️ *Уведіть секретне запитання:*\n\n"
@@ -732,7 +736,8 @@ class CreateGig:
     async def enter_answer(cls, callback: CallbackQuery, state: FSMContext) -> None:
         await CreateGigStates.secret_word.set()
         await context_manager.edit(state=state,
-                                   text=f"❔ *Уведіть секретне слово (відповідь на секретне запитання):*",
+                                   text=f"❔ *Уведіть секретне слово (відповідь на секретне запитання):*\n\n"
+                                        f"‼ Відповідь має складатись із одного слова або цифри.",
                                    image="description",
                                    reply_markup=CreateGigMenu.keyboard(),
                                    with_placeholder=False)
@@ -1141,10 +1146,22 @@ def register_user_handlers(dp: Dispatcher) -> None:
         marketplace.delete_gig, Text(endswith=GigContextMenu.confirm_delete_callback), state=ProfileStates.gigs
     )
     dp.register_callback_query_handler(
-        marketplace.gig_preview, Text(endswith=[GigContextMenu.preview_callback, GigContextMenu.detail_callback]), state=[ProfileStates.gigs,
-                                                                                                                          MarketplaceStates.gigs_list,
-                                                                                                                          MarketplaceStates.latest_dashboard]
+        marketplace.gig_preview,
+        Text(endswith=[GigContextMenu.preview_callback,
+                       GigContextMenu.detail_callback,
+                       GigContextMenu.dashboard_callback]),
+        state=[ProfileStates.gigs,
+               MarketplaceStates.gigs_list,
+               MarketplaceStates.latest_dashboard]
     )
     dp.register_callback_query_handler(
-        marketplace.back_to_menu, Text(equals=Controls.backward_callback), state=GigPreviewStates.preview
+        marketplace.back_to_menu, Text(equals=Controls.backward_callback), state=[GigPreviewStates.preview,
+                                                                                  GigPreviewStates.secret_word,
+                                                                                  GigPreviewStates.contacts]
+    )
+    dp.register_callback_query_handler(
+        marketplace.contact_with, Text(endswith=GigContextMenu.contact_callback), state=GigPreviewStates.preview
+    )
+    dp.register_message_handler(
+        marketplace.check_access, state=GigPreviewStates.secret_word
     )

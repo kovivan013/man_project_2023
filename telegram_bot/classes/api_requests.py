@@ -110,7 +110,7 @@ class UserAPI(API):
     async def send_message(cls, state: FSMContext, telegram_id: int, data: dict) -> 'DataStructure':
         endpoint: str = cls.__prefix(f"/{telegram_id}/send_message")
         response = await cls._post_request(endpoint=endpoint,
-                                       data=data)
+                                           data=data)
 
         if response._success:
             from .utils_classes import context_manager
@@ -120,8 +120,7 @@ class UserAPI(API):
                 message=await bot.send_message(chat_id=telegram_id,
                                                text=partial_data.text,
                                                reply_markup=partial_data.reply_markup,
-                                               parse_mode="Markdown",
-                                               disable_notification=True)
+                                               parse_mode="Markdown")
             )
 
         return response
@@ -136,7 +135,7 @@ class AdminAPI(API):
 
     @classmethod
     async def decline_create(cls, telegram_id: int, gig_id: str) -> 'DataStructure':
-        endpoint: str = cls.__prefix(f"/{telegram_id}/{gig_id}/decline_request")
+        endpoint: str = cls.__prefix(f"/{telegram_id}/{gig_id}/decline_create")
         return await cls._get_request(endpoint=endpoint)
 
 class SystemAPI(API):

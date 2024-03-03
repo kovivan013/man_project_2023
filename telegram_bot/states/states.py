@@ -61,3 +61,4 @@ class GigPreviewStates(StatesGroup):
 
 class MessagesStates(StatesGroup):
     messages_menu = State()
+

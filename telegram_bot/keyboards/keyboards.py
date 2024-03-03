@@ -847,14 +847,18 @@ class GigContextMenu(YesOrNo, Controls):
     preview: str = f"🔍 Переглянути"
     stop: str = f"🛑 Зупинити"
     contact: str = f"📞 Це моя річ!"
+    call: str = f"🔍 Я знайшов річ!"
+    chat_for_talking: str = f"Чат для зв'язку"
     # stats: str = f"📊 Статистика"
     # share: str = f"🔗 Поділитися"
 
     # placeholder_callback: str = f"_placeholder"
     detail_callback: str = f"detail_callback"
+    dashboard_callback: str = f"board_callback" # text equals detail button
     preview_callback: str = f"_preview_callback"
     stop_callback: str = f"_stop_callback"
     contact_callback: str = f"_contact_callback"
+    call_callback: str = f"_call_callback"
     # stats_callback: str = f"_stats_callback"
     # share_callback: str = f"_share_callback"
     confirm_delete_callback: str = f"_confirm_delete"
@@ -900,8 +904,22 @@ class GigContextMenu(YesOrNo, Controls):
         return keyboard
 
     @classmethod
-    def contact_keyboard(cls, with_contact: bool = False) -> Union[InlineKeyboardMarkup]:
+    def dashboard_keyboard(cls, telegram_id: int = 0, gig_id: int = 0) -> Union[InlineKeyboardMarkup]:
         keyboard = default_inline_keyboard()
+        callback_value: str = f"{telegram_id}_{gig_id}"
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.detail,
+                                 callback_data=f"{callback_value}_{cls.dashboard_callback}")
+        )
+
+        return keyboard
+
+    @classmethod
+    def contact_keyboard(cls, telegram_id: int, gig_id: int,
+                         with_contact: bool = False, with_call: bool = False) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+        callback_value: str = f"{telegram_id}_{gig_id}"
 
         keyboard.add(
             InlineKeyboardButton(text=cls.backward,
@@ -910,8 +928,27 @@ class GigContextMenu(YesOrNo, Controls):
         if with_contact:
             keyboard.insert(
                 InlineKeyboardButton(text=cls.contact,
-                                     callback_data=cls.contact_callback)
+                                     callback_data=f"{callback_value}{cls.contact_callback}")
             )
+        elif with_call:
+            keyboard.insert(
+                InlineKeyboardButton(text=cls.call,
+                                     callback_data=f"{callback_value}{cls.call_callback}")
+            )
+
+        return keyboard
+
+    @classmethod
+    def chat_keyboard(cls, url: str) -> Union[InlineKeyboardMarkup]:
+        keyboard = default_inline_keyboard()
+
+        keyboard.add(
+            InlineKeyboardButton(text=cls.backward,
+                                 callback_data=cls.backward_callback),
+            InlineKeyboardButton(text=cls.chat_for_talking,
+                                 url=url)
+        )
+
 
         return keyboard
 

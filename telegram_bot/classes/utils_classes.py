@@ -11,11 +11,11 @@ from aiogram.dispatcher.filters.state import State
 from classes.api_requests import UserAPI, AdminAPI, LocationAPI
 from keyboards.keyboards import (
     YesOrNo, Controls, MyProfile, Filters, DropdownMenu, UpdateProfile, InlineKeyboardMarkup,
-    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, AdminMenu, default_inline_keyboard
+    CreateGigMenu, CalendarMenu, ListMenu, MainMenu, GigContextMenu, AdminMenu, MessagesButtons, default_inline_keyboard
 )
 from states.states import FiltersStates, GigPreviewStates, ProfileStates
 from utils.utils import utils
-from schemas.api_schemas import BaseGig, BaseModel, GigsResponse
+from schemas.api_schemas import BaseGig, BaseModel, GigsResponse, BaseUser, SendMessage
 from schemas.data_schemas import GigMessage, DataStructure
 from photos_database.handlers import S3DB
 from api.utils_schemas import StateStructure, LocationStructure
@@ -377,7 +377,8 @@ class ContextManager(Storage):
 
     async def edit(self, state: FSMContext,
                    text: str = None, image: str = None, file_id: str = None,
-                   reply_markup: InlineKeyboardMarkup = None, with_placeholder: bool = True):
+                   reply_markup: InlineKeyboardMarkup = None,
+                   with_placeholder: bool = True, parse_mode: str = "Markdown"):
 
         if not await self.states_equals(state):
             await self.delete_context_messages(state)
@@ -410,7 +411,7 @@ class ContextManager(Storage):
         edited_message = await storage.message.edit_media(media=InputMediaPhoto(
             media=media,
             caption=text,
-            parse_mode="Markdown"
+            parse_mode=parse_mode
         ),
             reply_markup=keyboard)
         storage.message = edited_message
@@ -679,10 +680,14 @@ class Marketplace(Storage):
         }
     }
 
-    def __init__(self, document: GigsResponse = GigsResponse(), gigs: list = [], open_id: int = 0):
+    def __init__(self, document: GigsResponse = GigsResponse(),
+                 gigs: list = [], open_id: int = 0,
+                 confirm_id: int = 0, confirm_owner_id: int = 0):
         self.document = document
         self.gigs = gigs
         self.open_id = open_id
+        self.confirm_id = confirm_id
+        self.confirm_owner_id = confirm_owner_id
 
     async def _document(self, state: FSMContext):
         storage: self = await self._storage(state)
@@ -911,8 +916,11 @@ class Marketplace(Storage):
                 1: "знайдену"
             }
         }
-        callback_data: dict = {
-            GigContextMenu.detail_callback: True,
+        with_contact: dict = {
+            GigContextMenu.detail_callback: True
+        }
+        with_call: dict = {
+            GigContextMenu.dashboard_callback: True
         }
         caption = f"{modes[0][data.mode]} *{data.data.name.lower()}*\n\n" \
                   f"" \
@@ -937,8 +945,13 @@ class Marketplace(Storage):
             chat_id=state.chat,
             message_id=message_id,
             reply_markup=GigContextMenu.contact_keyboard(
-                with_contact=callback_data.get(
-                    "_".join(callback.data.split("_")[-2:]), False
+                telegram_id=telegram_id,
+                gig_id=gig_id,
+                with_contact=with_contact.get(
+                    splited := "_".join(callback.data.split("_")[-2:]), False
+                ),
+                with_call=with_call.get(
+                    splited, False
                 )
             )
         )
@@ -953,6 +966,84 @@ class Marketplace(Storage):
             from handlers.user_handlers import MyProfileMH
             await MyProfileMH.my_gigs(message=callback.message,
                                       state=state)
+
+    async def contact_with(self, callback: CallbackQuery, state: FSMContext) -> None:
+        telegram_id, gig_id = tuple(callback.data.split("_")[:2])
+        storage: self = await self._storage(state)
+        storage.confirm_owner_id = telegram_id
+        storage.confirm_id = gig_id
+        await self._save(state, storage)
+        response = await UserAPI.get_gig(telegram_id=telegram_id,
+                                         gig_id=gig_id)
+        if response._success:
+            data = BaseGig().model_validate(response.data)
+            await GigPreviewStates.secret_word.set()
+            await callback.message.edit_media(media=InputMediaPhoto(
+                media=await current_state.state_photo(image="your_thing"),
+                caption=f"🎁 Для *отримання доступу* до контактів власника цього оголошення потрібно дати відповідь на секретне запитання:\n\n"
+                        f"\"{data.data.question}\"\n\n"
+                        f"‼ *Відповідь складається з одного слова або цифри.*",
+                parse_mode="Markdown"
+            ),
+            reply_markup=MessagesButtons.keyboard())
+
+    async def check_access(self, message: Message, state: FSMContext) -> None:
+        await message.delete()
+        storage: self = await self._storage(state)
+        response = await UserAPI.get_gig(telegram_id=storage.confirm_owner_id,
+                                         gig_id=storage.confirm_id)
+        if response._success:
+            data = BaseGig().model_validate(response.data)
+            if data.data.question and data.data.secret_word:
+                if message.text == data.data.secret_word:
+                    await self.allow_access(message,
+                                            state=state,
+                                            partial_data=data)
+                else:
+                    await self.decline_access(message,
+                                              state=state)
+            else:
+                await self.allow_access(message,
+                                        state=state,
+                                        partial_data=data)
+
+
+    async def allow_access(self, message: Message, state: FSMContext, partial_data: BaseGig) -> None:
+        await GigPreviewStates.contacts.set()
+        response = await UserAPI.get_user(telegram_id=partial_data.telegram_id)
+
+        if response.success:
+            user = BaseUser().model_validate(response.data)
+            await context_manager.edit(state=state,
+                                       text=f"✅ Перевірка пройдена успішна\\!\n\n"
+                                            f"*Номер телефону*: ||\\+{user.phone_number}||",
+                                       reply_markup=GigContextMenu.chat_keyboard(url=f"t.me/{user.username}"),
+                                       image="allow_access",
+                                       parse_mode="MarkdownV2",
+                                       with_placeholder=False)
+
+            payload = SendMessage()
+            payload.text = f"Користувач [{(username := message.from_user.username)}]({f't.me/{username}'}) (`{message.from_user.id}`) отримав доступ до Ваших контактів, оскільки вказав правильну відповідь на секретне запитання!\n\n" \
+                           f"*Пам'ятайте, Ви можете в будь-який момент звернутися до підтримки сервісу за консультацією.*"
+            payload.reply_markup = GigContextMenu.chat_keyboard(url=f"t.me/{user.username}").to_python()
+            state.chat = partial_data.telegram_id
+            state.user = partial_data.telegram_id
+            await UserAPI.send_message(state=state,
+                                       telegram_id=partial_data.telegram_id,
+                                       data=payload.model_dump())
+
+
+    async def decline_access(self, message: Message, state: FSMContext, partial_data: BaseGig) -> None:
+        await GigPreviewStates.contacts.set()
+        response = await UserAPI.get_user(telegram_id=state.user)
+        if response.success:
+            user = BaseUser().model_validate(response.data)
+            await context_manager.edit(state=state,
+                                       text=f"❌ *Секретне слово уведене неправильно!*\n\n"
+                                            f"Будь ласка, спробуйте знову.",
+                                       reply_markup=MessagesButtons.keyboard(),
+                                       image="decline_access",
+                                       with_placeholder=False)
 
     async def send_check_request(
             self,
@@ -969,8 +1060,6 @@ class Marketplace(Storage):
             (await UserAPI.get_gig(telegram_id=telegram_id,
                                    gig_id=gig_id)).data
         )
-        print(data.model_dump())
-        #TODO API REQUEST
         await bot.send_photo(chat_id=settings.HELPERS_CHAT,
                              photo=photo,
                              caption=f"Новий запит на створення оголошення від [{from_username}](t.me/{from_username}) (`{from_id}`)\n\n"

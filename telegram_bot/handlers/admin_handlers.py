@@ -58,5 +58,5 @@ def register_admin_handlers(dp: Dispatcher) -> None:
         accept_request, Text(endswith="_accept")
     )
     dp.register_callback_query_handler(
-        accept_request, Text(endswith="_decline")
+        decline_request, Text(endswith="_decline")
     )

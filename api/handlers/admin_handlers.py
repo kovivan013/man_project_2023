@@ -55,17 +55,16 @@ def decline_create(telegram_id: int, gig_id: str, db: Session = Depends(get_db))
                                       message="❌ Користувача не існує!")
 
     gigs = BaseUser().gigs.model_validate(user.gigs)
+    pending_gigs = gigs.pending.copy()
 
-    if gig_id not in gigs.pending:
+    if gig_id not in pending_gigs:
         return Reporter.api_exception(exception=exceptions.ItemNotFoundException,
                                       message="❌ Такого оголошення не існує!")
-
     gigs.pending.pop(gig_id)
-
     user.gigs = gigs.model_dump()
     db.commit()
 
-    result.data = gigs.pending[gig_id]
+    result.data = pending_gigs[gig_id]
     result.message = "✅ Успішно відхилено!"
     result._status = status.HTTP_200_OK
 
